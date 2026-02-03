@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HR Analytics Dashboard - Complete Guide</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        h2 {
+            color: #2980b9;
+            margin-top: 30px;
+            margin-bottom: 15px;
+            border-left: 4px solid #3498db;
+            padding-left: 10px;
+        }
+        h3 {
+            color: #34495e;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background: #3498db;
+            color: white;
+        }
+        tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+        tr:hover {
+            background: #f1f1f1;
+        }
+        code {
+            background: #ecf0f1;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+        pre {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+        .highlight {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .info {
+            background: #d1ecf1;
+            border-left: 4px solid #17a2b8;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .success {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .danger {
+            background: #f8d7da;
+            border-left: 4px solid #dc3545;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .toc {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 30px;
+        }
+        .toc ul {
+            list-style: none;
+            padding-left: 20px;
+        }
+        .toc li {
+            margin: 8px 0;
+        }
+        .toc a {
+            color: #2980b9;
+            text-decoration: none;
+        }
+        .toc a:hover {
+            text-decoration: underline;
+        }
+        .quick-ref {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 10px;
+            margin: 30px 0;
+        }
+        .quick-ref h2 {
+            color: white;
+            border-left-color: white;
+        }
+        .quick-ref code {
+            background: rgba(255,255,255,0.2);
+            color: white;
+        }
+        ul, ol {
+            margin: 10px 0 10px 30px;
+        }
+        li {
+            margin: 5px 0;
+        }
+        .page-break {
+            page-break-before: always;
+        }
+        @media print {
+            body {
+                background: white;
+            }
+            .container {
+                box-shadow: none;
+            }
+            .quick-ref {
+                background: #333 !important;
+                -webkit-print-color-adjust: exact;
+            }
+        }
+        .header-info {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #666;
+        }
+        .badge {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            margin: 2px;
+        }
+        .badge-blue { background: #3498db; color: white; }
+        .badge-green { background: #27ae60; color: white; }
+        .badge-orange { background: #f39c12; color: white; }
+        .badge-red { background: #e74c3c; color: white; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>HR Analytics Dashboard</h1>
+        <p class="header-info">
+            <strong>Complete Offline Guide</strong><br>
+            Version 1.2 | February 2026<br>
+            <span class="badge badge-blue">Streamlit</span>
+            <span class="badge badge-green">Python</span>
+            <span class="badge badge-orange">Pandas</span>
+        </p>
+
+        <div class="toc">
+            <h3>Table of Contents</h3>
+            <ul>
+                <li><a href="#overview">1. Project Overview</a></li>
+                <li><a href="#getting-started">2. Getting Started</a></li>
+                <li><a href="#features">3. Dashboard Features</a></li>
+                <li><a href="#how-to-use">4. How to Use</a></li>
+                <li><a href="#updating-data">5. Updating Data</a></li>
+                <li><a href="#data-requirements">6. Data Requirements</a></li>
+                <li><a href="#technical">7. Technical Documentation</a></li>
+                <li><a href="#customization">8. Customization Guide</a></li>
+                <li><a href="#troubleshooting">9. Troubleshooting</a></li>
+                <li><a href="#appendix">10. Appendix</a></li>
+            </ul>
+        </div>
+
+        <div class="quick-ref">
+            <h2>Quick Reference</h2>
+            <p><strong>Dashboard URL:</strong> <code>https://hr-dashboard-51talk.streamlit.app</code></p>
+            <p><strong>To Update Data:</strong> Sidebar → Upload New File → Select Excel → Done!</p>
+            <p><strong>Run Locally:</strong> <code>pip install -r requirements.txt && streamlit run app.py</code></p>
+        </div>
+
+        <!-- Section 1 -->
+        <h2 id="overview">1. Project Overview</h2>
+
+        <h3>1.1 What is this Dashboard?</h3>
+        <p>The HR Analytics Dashboard is a web-based application that provides comprehensive insights into workforce data. It analyzes employee information, tracks attrition, measures tenure, and identifies trends.</p>
+
+        <h3>1.2 Key Features</h3>
+        <table>
+            <tr><th>Feature</th><th>Description</th></tr>
+            <tr><td>Real-time Analytics</td><td>Instant calculations and visualizations</td></tr>
+            <tr><td>Interactive Filters</td><td>Filter by department, status, gender, exit type</td></tr>
+            <tr><td>File Upload</td><td>Update data without coding</td></tr>
+            <tr><td>Export</td><td>Download filtered data as CSV</td></tr>
+            <tr><td>5 Analysis Tabs</td><td>Overview, Attrition, Tenure, Trends, Employee Data</td></tr>
+        </table>
+
+        <h3>1.3 Project Files</h3>
+        <pre>
+HR Dashboard/
+├── app.py                    # Main application code
+├── requirements.txt          # Python dependencies
+├── Master.xlsx               # Default HR data file
+├── README.md                 # Quick start guide
+├── DOCUMENTATION.md          # Technical documentation
+├── DATA_DICTIONARY.md        # Data column specifications
+└── HR_Dashboard_Guide.html   # This file
+        </pre>
+
+        <!-- Section 2 -->
+        <h2 id="getting-started" class="page-break">2. Getting Started</h2>
+
+        <h3>2.1 Access Online (Recommended)</h3>
+        <div class="success">
+            Simply open your browser and go to:<br>
+            <code>https://hr-dashboard-51talk.streamlit.app</code><br>
+            No installation required!
+        </div>
+
+        <h3>2.2 Run Locally</h3>
+        <ol>
+            <li><strong>Install Python</strong> - Download Python 3.8+ from python.org</li>
+            <li><strong>Download Project</strong> - Clone or download from GitHub</li>
+            <li><strong>Install Dependencies</strong>
+                <pre>pip install -r requirements.txt</pre>
+            </li>
+            <li><strong>Run Dashboard</strong>
+                <pre>streamlit run app.py</pre>
+            </li>
+            <li><strong>Open Browser</strong> - Go to http://localhost:8501</li>
+        </ol>
+
+        <!-- Section 3 -->
+        <h2 id="features">3. Dashboard Features</h2>
+
+        <h3>3.1 Key Performance Indicators (KPIs)</h3>
+        <table>
+            <tr><th>Metric</th><th>Description</th><th>Calculation</th></tr>
+            <tr><td>Total Employees</td><td>All employees in filtered data</td><td>Count of rows</td></tr>
+            <tr><td>Active</td><td>Currently employed</td><td>Status = "Active"</td></tr>
+            <tr><td>Departed</td><td>No longer employed</td><td>Status = "Departed"</td></tr>
+            <tr><td>Attrition Rate</td><td>Percentage who left</td><td>(Departed / Total) × 100</td></tr>
+            <tr><td>Avg Tenure</td><td>Average employment duration</td><td>Mean of tenure (months)</td></tr>
+            <tr><td>Avg Age</td><td>Average employee age</td><td>Mean of ages</td></tr>
+        </table>
+
+        <h3>3.2 Analysis Tabs</h3>
+        <table>
+            <tr><th>Tab</th><th>Contents</th></tr>
+            <tr><td><strong>Overview</strong></td><td>Gender distribution, Employee status, Departments, Positions, Age distribution</td></tr>
+            <tr><td><strong>Attrition Analysis</strong></td><td>Exit types, Exit reasons, Attrition by department, Voluntary vs Involuntary</td></tr>
+            <tr><td><strong>Tenure Analysis</strong></td><td>Tenure distribution, By department, By status, Early leavers</td></tr>
+            <tr><td><strong>Trends</strong></td><td>Hiring trends, Attrition trends, Monthly patterns</td></tr>
+            <tr><td><strong>Employee Data</strong></td><td>Searchable table, Column selector, CSV download</td></tr>
+        </table>
+
+        <!-- Section 4 -->
+        <h2 id="how-to-use">4. How to Use the Dashboard</h2>
+
+        <h3>4.1 Using Filters</h3>
+        <p>Filters are located in the <strong>left sidebar</strong>:</p>
+        <table>
+            <tr><th>Filter</th><th>Options</th><th>Effect</th></tr>
+            <tr><td>Department</td><td>All departments</td><td>Shows only selected department</td></tr>
+            <tr><td>Employee Status</td><td>Active, Departed</td><td>Shows only selected status</td></tr>
+            <tr><td>Gender</td><td>M, F</td><td>Shows only selected gender</td></tr>
+            <tr><td>Exit Type</td><td>Resigned, Terminated, Dropped</td><td>Shows only selected exit type</td></tr>
+        </table>
+
+        <div class="info">
+            <strong>Tip:</strong> Select "All" to reset a filter and show all data.
+        </div>
+
+        <h3>4.2 Exporting Data</h3>
+        <ol>
+            <li>Go to "Employee Data" tab</li>
+            <li>Apply your desired filters</li>
+            <li>Click "Download Filtered Data as CSV"</li>
+            <li>Open the file in Excel</li>
+        </ol>
+
+        <!-- Section 5 -->
+        <h2 id="updating-data" class="page-break">5. Updating Data</h2>
+
+        <h3>5.1 Method 1: Upload in Dashboard (Easiest)</h3>
+        <div class="success">
+            <ol>
+                <li>Open the dashboard</li>
+                <li>In sidebar, select <strong>"Upload New File"</strong></li>
+                <li>Click <strong>"Browse files"</strong></li>
+                <li>Select your Excel file (.xlsx)</li>
+                <li>Dashboard updates instantly!</li>
+            </ol>
+        </div>
+
+        <h3>5.2 Method 2: Replace Master.xlsx via Git</h3>
+        <pre>
+git add Master.xlsx
+git commit -m "Update HR data"
+git push
+        </pre>
+        <p>Streamlit Cloud will auto-redeploy in 2-3 minutes.</p>
+
+        <!-- Section 6 -->
+        <h2 id="data-requirements">6. Data Requirements</h2>
+
+        <h3>6.1 Required Columns</h3>
+        <table>
+            <tr><th>Column Name</th><th>Type</th><th>Example</th></tr>
+            <tr><td>Full Name</td><td>Text</td><td>"Ahmed Mohamed"</td></tr>
+            <tr><td>Gender</td><td>Text</td><td>"M" or "F"</td></tr>
+            <tr><td>Birthday Date</td><td>Date</td><td>1990-05-15</td></tr>
+            <tr><td>Department</td><td>Text</td><td>"EA"</td></tr>
+            <tr><td>Position</td><td>Text</td><td>"EA-L2"</td></tr>
+            <tr><td>Employee Status</td><td>Text</td><td>"Active" or "Departed"</td></tr>
+            <tr><td>Join Date (yyyy/mm/dd)</td><td>Date</td><td>2023-01-15</td></tr>
+        </table>
+
+        <h3>6.2 Additional Columns for Departed Employees</h3>
+        <table>
+            <tr><th>Column Name</th><th>Type</th><th>Example</th></tr>
+            <tr><td>Exit Date yyyy/mm/dd</td><td>Date</td><td>2024-06-30</td></tr>
+            <tr><td>Exit Type</td><td>Text</td><td>"Resigned"</td></tr>
+            <tr><td>Exit Reason Category</td><td>Text</td><td>"Personal Reasons"</td></tr>
+        </table>
+
+        <h3>6.3 Valid Values</h3>
+        <table>
+            <tr><th>Field</th><th>Valid Values</th></tr>
+            <tr><td>Employee Status</td><td>Active, Departed</td></tr>
+            <tr><td>Gender</td><td>M, F</td></tr>
+            <tr><td>Exit Type</td><td>Resigned, Terminated, Dropped</td></tr>
+            <tr><td>Exit Reason Category</td><td>Personal Reasons, Career & Growth, Performance Issues, Training Fail, Failed Probation, No Show, Misconduct & Compliance, Work Environment & Culture, Management Issues, Business Restructuring, Other</td></tr>
+        </table>
+
+        <!-- Section 7 -->
+        <h2 id="technical" class="page-break">7. Technical Documentation</h2>
+
+        <h3>7.1 Technology Stack</h3>
+        <table>
+            <tr><th>Component</th><th>Technology</th></tr>
+            <tr><td>Language</td><td>Python 3.8+</td></tr>
+            <tr><td>Framework</td><td>Streamlit</td></tr>
+            <tr><td>Data Processing</td><td>Pandas, NumPy</td></tr>
+            <tr><td>Charts</td><td>Streamlit native</td></tr>
+            <tr><td>Hosting</td><td>Streamlit Community Cloud</td></tr>
+        </table>
+
+        <h3>7.2 Code Structure (app.py)</h3>
+        <table>
+            <tr><th>Lines</th><th>Content</th></tr>
+            <tr><td>1-8</td><td>Imports and page configuration</td></tr>
+            <tr><td>10-16</td><td>Data source selection</td></tr>
+            <tr><td>18-57</td><td>Data processing functions</td></tr>
+            <tr><td>59-106</td><td>Data loading logic</td></tr>
+            <tr><td>108-141</td><td>Sidebar filters</td></tr>
+            <tr><td>143-161</td><td>KPI metrics</td></tr>
+            <tr><td>163-170</td><td>Tab definitions</td></tr>
+            <tr><td>172-222</td><td>Tab 1: Overview</td></tr>
+            <tr><td>224-290</td><td>Tab 2: Attrition Analysis</td></tr>
+            <tr><td>292-346</td><td>Tab 3: Tenure Analysis</td></tr>
+            <tr><td>348-383</td><td>Tab 4: Trends</td></tr>
+            <tr><td>385-432</td><td>Tab 5: Employee Data</td></tr>
+        </table>
+
+        <h3>7.3 Calculated Fields</h3>
+        <table>
+            <tr><th>Field</th><th>Formula</th></tr>
+            <tr><td>Age</td><td>(Today - Birthday Date) ÷ 365.25 days</td></tr>
+            <tr><td>Tenure (Months)</td><td>(Exit Date or Today - Join Date) ÷ 30.44 days</td></tr>
+            <tr><td>Attrition Rate</td><td>(Departed ÷ Total) × 100</td></tr>
+        </table>
+
+        <!-- Section 8 -->
+        <h2 id="customization">8. Customization Guide</h2>
+
+        <h3>8.1 Adding a New KPI</h3>
+        <pre>
+# Calculate the metric
+new_metric = filtered_df['column'].mean()
+
+# Add to display (change columns from 6 to 7)
+col1, col2, col3, col4, col5, col6, col7 = st.columns(7)
+col7.metric("New Metric", f"{new_metric:.1f}")
+        </pre>
+
+        <h3>8.2 Adding a New Filter</h3>
+        <pre>
+# Add to sidebar
+new_filter = st.sidebar.selectbox(
+    "New Filter",
+    ["All"] + df['column'].dropna().unique().tolist()
+)
+
+# Apply filter
+if new_filter != "All":
+    filtered_df = filtered_df[filtered_df['column'] == new_filter]
+        </pre>
+
+        <h3>8.3 Adding a New Chart</h3>
+        <pre>
+# Bar chart
+st.subheader("Chart Title")
+data = filtered_df['column'].value_counts()
+st.bar_chart(data)
+
+# Line chart
+st.line_chart(trend_data)
+        </pre>
+
+        <h3>8.4 Adding a New Tab</h3>
+        <pre>
+# Add tab name to the list
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+    "..existing tabs..",
+    "New Tab"
+])
+
+# Add content
+with tab6:
+    st.subheader("New Analysis")
+    # Your charts here
+        </pre>
+
+        <!-- Section 9 -->
+        <h2 id="troubleshooting" class="page-break">9. Troubleshooting</h2>
+
+        <h3>9.1 Common Issues</h3>
+        <table>
+            <tr><th>Issue</th><th>Cause</th><th>Solution</th></tr>
+            <tr><td>Dashboard won't load</td><td>Internet or server issue</td><td>Check connection, try again later</td></tr>
+            <tr><td>"Column not found"</td><td>Missing required column</td><td>Check Excel column names</td></tr>
+            <tr><td>Charts are empty</td><td>All data filtered out</td><td>Reset filters to "All"</td></tr>
+            <tr><td>Wrong calculations</td><td>Invalid date formats</td><td>Use YYYY-MM-DD format</td></tr>
+            <tr><td>Upload fails</td><td>Wrong file format</td><td>Use .xlsx format</td></tr>
+            <tr><td>Data not updating</td><td>Browser cache</td><td>Hard refresh: Ctrl+Shift+R</td></tr>
+        </table>
+
+        <div class="danger">
+            <strong>Important:</strong> Always use .xlsx format for Excel files. The .xls format may not work correctly.
+        </div>
+
+        <!-- Section 10 -->
+        <h2 id="appendix">10. Appendix</h2>
+
+        <h3>10.1 Keyboard Shortcuts</h3>
+        <table>
+            <tr><th>Shortcut</th><th>Action</th></tr>
+            <tr><td>Ctrl + R</td><td>Refresh page</td></tr>
+            <tr><td>Ctrl + Shift + R</td><td>Hard refresh (clear cache)</td></tr>
+            <tr><td>Ctrl + F</td><td>Find on page</td></tr>
+            <tr><td>Ctrl + P</td><td>Print page</td></tr>
+        </table>
+
+        <h3>10.2 Department Codes</h3>
+        <table>
+            <tr><th>Code</th><th>Full Name</th></tr>
+            <tr><td>EA</td><td>Executive Assistant</td></tr>
+            <tr><td>CM</td><td>Community Manager</td></tr>
+            <tr><td>CC</td><td>Customer Care</td></tr>
+            <tr><td>TMK</td><td>Telemarketing</td></tr>
+            <tr><td>TA</td><td>Talent Acquisition</td></tr>
+            <tr><td>HR</td><td>Human Resources</td></tr>
+            <tr><td>IT</td><td>Information Technology</td></tr>
+        </table>
+
+        <h3>10.3 Glossary</h3>
+        <table>
+            <tr><th>Term</th><th>Definition</th></tr>
+            <tr><td>Attrition</td><td>Employees leaving the organization</td></tr>
+            <tr><td>Attrition Rate</td><td>Percentage of employees who left</td></tr>
+            <tr><td>Tenure</td><td>Length of employment</td></tr>
+            <tr><td>Voluntary Turnover</td><td>Employees who resigned</td></tr>
+            <tr><td>Involuntary Turnover</td><td>Employees who were terminated</td></tr>
+            <tr><td>Early Leaver</td><td>Employee who left within 6 months</td></tr>
+        </table>
+
+        <hr style="margin: 40px 0;">
+        <p style="text-align: center; color: #666;">
+            <strong>HR Analytics Dashboard</strong><br>
+            Version 1.2 | February 2026<br>
+            GitHub: github.com/ahmedalsadeqhr/HR-Dashboard
+        </p>
+    </div>
+</body>
+</html>
