@@ -38,6 +38,12 @@ def load_auth_config():
         return yaml.safe_load(f)
 
 
+def save_auth_config(config):
+    config_path = os.path.join(os.path.dirname(__file__), 'auth_config.yaml')
+    with open(config_path, 'w') as f:
+        yaml.dump(config, f, default_flow_style=False)
+
+
 def get_user_role(config, username):
     if username and username in config['credentials']['usernames']:
         return config['credentials']['usernames'][username].get('role', 'viewer')
@@ -58,9 +64,6 @@ authenticator.login()
 if st.session_state.get("authentication_status") is None:
     st.title("📊 HR Analytics Dashboard")
     st.info("Please enter your credentials to access the dashboard.")
-    st.markdown("---")
-    st.markdown("**Demo Accounts:**")
-    st.code("Admin:  admin / admin123\nEditor: editor / editor123\nViewer: viewer / viewer123")
     st.stop()
 
 if st.session_state.get("authentication_status") is False:
@@ -228,6 +231,8 @@ tab_names = [
 ]
 if user_role in ('editor', 'admin'):
     tab_names.append("✏️ Edit Data")
+if user_role == 'admin':
+    tab_names.append("👤 User Management")
 
 tabs = st.tabs(tab_names)
 
@@ -898,6 +903,109 @@ if user_role in ('editor', 'admin'):
                             st.cache_data.clear()
                         except Exception as e:
                             st.error(f"Error saving: {e}")
+
+
+# ===================== TAB 8: USER MANAGEMENT (admin only) =====================
+if user_role == 'admin':
+    # Tab index: 6 (overview..employee data) + 1 (edit data) = 7
+    with tabs[7]:
+        st.subheader("User Management")
+        st.caption("Manage dashboard user accounts and credentials.")
+
+        manage_action = st.radio("Action", ["Change Password", "Add New User", "Remove User"],
+                                 horizontal=True, key="user_mgmt_action")
+
+        # --- Change Password ---
+        if manage_action == "Change Password":
+            st.markdown("### Change User Password")
+            all_users = list(config['credentials']['usernames'].keys())
+            target_user = st.selectbox("Select user", all_users, key="pw_user")
+
+            user_info = config['credentials']['usernames'][target_user]
+            st.write(f"**Name:** {user_info['name']}")
+            st.write(f"**Role:** {user_info.get('role', 'viewer')}")
+
+            with st.form("change_password_form"):
+                new_pw = st.text_input("New Password", type="password", key="new_pw")
+                confirm_pw = st.text_input("Confirm Password", type="password", key="confirm_pw")
+                pw_submitted = st.form_submit_button("Update Password")
+
+                if pw_submitted:
+                    if not new_pw or len(new_pw) < 4:
+                        st.error("Password must be at least 4 characters.")
+                    elif new_pw != confirm_pw:
+                        st.error("Passwords do not match.")
+                    else:
+                        hashed = stauth.Hasher.hash(new_pw)
+                        config['credentials']['usernames'][target_user]['password'] = hashed
+                        save_auth_config(config)
+                        st.success(f"Password updated for **{target_user}**. The user can log in with the new password.")
+
+        # --- Add New User ---
+        elif manage_action == "Add New User":
+            st.markdown("### Add New User")
+            with st.form("add_user_form"):
+                acol1, acol2 = st.columns(2)
+                with acol1:
+                    add_username = st.text_input("Username", key="add_uname")
+                    add_name = st.text_input("Display Name", key="add_dname")
+                with acol2:
+                    add_password = st.text_input("Password", type="password", key="add_pw")
+                    add_role = st.selectbox("Role", ["viewer", "editor", "admin"], key="add_role")
+
+                add_submitted = st.form_submit_button("Create User")
+
+                if add_submitted:
+                    if not add_username or not add_username.strip():
+                        st.error("Username is required.")
+                    elif add_username in config['credentials']['usernames']:
+                        st.error(f"Username **{add_username}** already exists.")
+                    elif not add_password or len(add_password) < 4:
+                        st.error("Password must be at least 4 characters.")
+                    elif not add_name:
+                        st.error("Display Name is required.")
+                    else:
+                        hashed = stauth.Hasher.hash(add_password)
+                        config['credentials']['usernames'][add_username] = {
+                            'name': add_name,
+                            'password': hashed,
+                            'role': add_role,
+                        }
+                        save_auth_config(config)
+                        st.success(f"User **{add_username}** created with role **{add_role}**.")
+
+        # --- Remove User ---
+        elif manage_action == "Remove User":
+            st.markdown("### Remove User")
+            all_users = list(config['credentials']['usernames'].keys())
+            removable = [u for u in all_users if u != username]  # Can't remove yourself
+
+            if not removable:
+                st.info("No other users to remove.")
+            else:
+                del_user = st.selectbox("Select user to remove", removable, key="del_user")
+                user_info = config['credentials']['usernames'][del_user]
+                st.write(f"**Name:** {user_info['name']}")
+                st.write(f"**Role:** {user_info.get('role', 'viewer')}")
+
+                confirm_del = st.checkbox("I confirm I want to remove this user", key="del_user_confirm")
+                if st.button("Remove User", type="primary", disabled=not confirm_del, key="del_user_btn"):
+                    del config['credentials']['usernames'][del_user]
+                    save_auth_config(config)
+                    st.success(f"User **{del_user}** has been removed.")
+
+        st.markdown("---")
+
+        # Show current users table
+        st.subheader("Current Users")
+        users_table = []
+        for uname, udata in config['credentials']['usernames'].items():
+            users_table.append({
+                'Username': uname,
+                'Display Name': udata.get('name', ''),
+                'Role': udata.get('role', 'viewer'),
+            })
+        st.dataframe(pd.DataFrame(users_table), use_container_width=True, hide_index=True)
 
 
 # ===================== FOOTER =====================
