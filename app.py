@@ -224,14 +224,14 @@ kpis = calculate_kpis(filtered_df)
 
 # Calculate deltas vs full (unfiltered) dataset for context
 kpis_all = calculate_kpis(df)
-def _delta(filtered_val, all_val, suffix="", invert=False):
+def _delta(filtered_val, all_val, suffix=""):
     """Return delta string if filters are active, else None."""
     if len(filtered_df) == len(df):
         return None
     diff = filtered_val - all_val
     if abs(diff) < 0.05:
         return None
-    return f"{diff:+.1f}{suffix}" if not invert else (f"{diff:+.1f}{suffix}", "inverse")
+    return f"{diff:+.1f}{suffix}"
 
 st.subheader("Key Performance Indicators")
 row1 = st.columns(6)
@@ -239,7 +239,8 @@ row1[0].metric("Total Employees", f"{kpis['total']:,}")
 row1[1].metric("Active", f"{kpis['active']:,}")
 row1[2].metric("Departed", f"{kpis['departed']:,}")
 row1[3].metric("Attrition Rate", f"{kpis['attrition_rate']:.1f}%",
-               delta=_delta(kpis['attrition_rate'], kpis_all['attrition_rate'], '%', invert=True))
+               delta=_delta(kpis['attrition_rate'], kpis_all['attrition_rate'], '%'),
+               delta_color="inverse")
 row1[4].metric("Retention Rate", f"{kpis['retention_rate']:.1f}%",
                delta=_delta(kpis['retention_rate'], kpis_all['retention_rate'], '%'))
 row1[5].metric("Avg Tenure (Mo)", f"{kpis['avg_tenure']:.1f}",
