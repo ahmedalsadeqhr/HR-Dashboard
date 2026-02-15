@@ -13,7 +13,7 @@ def process_data(df):
     """Process raw HR data: clean columns, parse dates, calculate derived fields."""
     # Ensure all column names are strings, then clean
     df.columns = [str(c) for c in df.columns]
-    df.columns = df.columns.str.replace('\n', ' ').str.strip()
+    df.columns = df.columns.str.replace('\n', ' ').str.replace('\r', ' ').str.replace('  ', ' ').str.strip()
 
     # Rename columns for consistency
     rename_map = {

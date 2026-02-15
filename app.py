@@ -31,7 +31,7 @@ COLOR_SEQUENCE = [COLORS['primary'], COLORS['success'], COLORS['danger'],
 
 DATA_FILE = "Master.xlsx"  # Used for saving edits back
 
-REQUIRED_COLUMNS = ['Full Name', 'Gender', 'Department', 'Position', 'Employee Status', 'Exit Type']
+REQUIRED_COLUMNS = ['Gender', 'Department', 'Position', 'Employee Status', 'Exit Type']
 
 CHART_CONFIG = {
     'displayModeBar': True,
@@ -111,6 +111,7 @@ df = None
 
 if uploaded_file is not None:
     try:
+        uploaded_file.seek(0)
         df = load_excel(uploaded_file)
         # Validate required columns
         missing = [c for c in REQUIRED_COLUMNS if c not in df.columns]
