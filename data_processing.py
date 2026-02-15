@@ -37,11 +37,14 @@ def process_data(df):
 
     # Tenure in months
     if 'Join Date' in df.columns:
-        df['Tenure (Months)'] = np.where(
-            df['Employee Status'] == 'Active',
-            ((today - df['Join Date']).dt.days / 30.44).fillna(0),
-            ((df['Exit Date'] - df['Join Date']).dt.days / 30.44).fillna(0)
-        )
+        if 'Exit Date' in df.columns:
+            df['Tenure (Months)'] = np.where(
+                df['Employee Status'] == 'Active',
+                ((today - df['Join Date']).dt.days / 30.44).fillna(0),
+                ((df['Exit Date'] - df['Join Date']).dt.days / 30.44).fillna(0)
+            )
+        else:
+            df['Tenure (Months)'] = ((today - df['Join Date']).dt.days / 30.44).fillna(0)
         df['Tenure (Months)'] = df['Tenure (Months)'].round(1)
 
     # Time periods
@@ -158,7 +161,7 @@ def calculate_kpis(df):
 
 def get_cohort_retention(df):
     """Calculate retention rate by join year cohort."""
-    if 'Join Year' not in df.columns:
+    if 'Join Year' not in df.columns or len(df) == 0:
         return pd.DataFrame()
 
     cohort = df.groupby('Join Year').agg(
@@ -168,6 +171,8 @@ def get_cohort_retention(df):
     ).reset_index()
 
     cohort = cohort[cohort['Join Year'] > 2000]
+    if len(cohort) == 0:
+        return pd.DataFrame()
     cohort['Retention Rate %'] = (cohort['Active'] / cohort['Total'] * 100).round(1)
     return cohort
 

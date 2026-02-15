@@ -5,6 +5,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 import yaml
 import os
+import io
 from datetime import datetime
 
 import streamlit_authenticator as stauth
@@ -28,7 +29,20 @@ COLOR_SEQUENCE = [COLORS['primary'], COLORS['success'], COLORS['danger'],
                   COLORS['warning'], COLORS['info'], COLORS['purple'],
                   COLORS['pink'], COLORS['brown']]
 
-DATA_FILE = "Master.xlsx"
+DATA_FILE = "Master.xlsx"  # Used for saving edits back
+
+REQUIRED_COLUMNS = ['Full Name', 'Gender', 'Department', 'Position', 'Employee Status', 'Exit Type']
+
+CHART_CONFIG = {
+    'displayModeBar': True,
+    'toImageButtonOptions': {
+        'format': 'png',
+        'scale': 3,
+        'filename': 'hr_chart',
+    },
+    'modeBarButtonsToAdd': ['downloadCsv'],
+    'displaylogo': False,
+}
 
 
 # ===================== AUTHENTICATION =====================
@@ -52,10 +66,12 @@ def get_user_role(config, username):
 
 config = load_auth_config()
 
+cookie_key = os.environ.get('HR_DASHBOARD_COOKIE_KEY', config['cookie']['key'])
+
 authenticator = stauth.Authenticate(
     config['credentials'],
     config['cookie']['name'],
-    config['cookie']['key'],
+    cookie_key,
     config['cookie']['expiry_days'],
 )
 
@@ -86,41 +102,39 @@ with header_col2:
 # ===================== DATA LOADING =====================
 st.sidebar.header("📁 Data Source")
 
-data_source = st.sidebar.radio(
-    "Choose data source:",
-    ["Default (Master.xlsx)", "Upload New File"]
+uploaded_file = st.sidebar.file_uploader(
+    "Upload Master Sheet", type=['xlsx', 'xls'],
+    help="Upload your HR data Excel file (Master Sheet)"
 )
-
-
-@st.cache_data
-def load_default():
-    return load_excel(DATA_FILE)
-
 
 df = None
 
-if data_source == "Upload New File":
-    uploaded_file = st.sidebar.file_uploader(
-        "Upload Excel file", type=['xlsx', 'xls'],
-        help="Upload your HR data file. Must have same column structure as Master.xlsx"
-    )
-    if uploaded_file is not None:
-        try:
-            df = load_excel(uploaded_file)
-            st.sidebar.success(f"Loaded {len(df)} records")
-        except Exception as e:
-            st.sidebar.error(f"Error loading file: {e}")
-    else:
-        st.sidebar.info("Please upload an Excel file")
-else:
+if uploaded_file is not None:
     try:
-        df = load_default()
-        st.sidebar.success(f"Using Master.xlsx ({len(df)} records)")
+        df = load_excel(uploaded_file)
+        # Validate required columns
+        missing = [c for c in REQUIRED_COLUMNS if c not in df.columns]
+        if missing:
+            st.sidebar.error(f"Missing required columns: {', '.join(missing)}")
+            df = None
+        else:
+            st.sidebar.success(f"Loaded {len(df)} records from **{uploaded_file.name}**")
+            st.sidebar.caption(f"Uploaded at {datetime.now().strftime('%Y-%m-%d %H:%M')}")
+            # Cache in session state so reruns don't lose data
+            st.session_state['hr_data'] = df
+            st.session_state['hr_file_name'] = uploaded_file.name
+            st.session_state['hr_upload_time'] = datetime.now().strftime('%Y-%m-%d %H:%M')
     except Exception as e:
-        st.sidebar.error(f"Error loading Master.xlsx: {e}")
+        st.sidebar.error(f"Error loading file: {e}")
+elif 'hr_data' in st.session_state:
+    df = st.session_state['hr_data']
+    st.sidebar.success(f"Using **{st.session_state.get('hr_file_name', 'Master Sheet')}** ({len(df)} records)")
+    st.sidebar.caption(f"Uploaded at {st.session_state.get('hr_upload_time', 'N/A')}")
+else:
+    st.sidebar.info("Please upload the Master Sheet (.xlsx) to get started.")
 
 if df is None:
-    st.warning("No data loaded. Please upload a file or check Master.xlsx exists.")
+    st.warning("No data loaded. Please upload the Master Sheet to get started.")
     st.stop()
 
 
@@ -128,7 +142,14 @@ if df is None:
 st.sidebar.markdown("---")
 st.sidebar.header("🔍 Filters")
 
+if st.sidebar.button("Reset All Filters"):
+    for key in ['dept_filter', 'status_filter', 'gender_filter', 'emp_type_filter',
+                'nationality_filter', 'exit_type_filter']:
+        st.session_state.pop(key, None)
+    st.rerun()
+
 # Date range filter
+date_range = None
 if 'Join Date' in df.columns:
     min_date = df['Join Date'].dropna().min().date()
     max_date = df['Join Date'].dropna().max().date()
@@ -172,7 +193,7 @@ exit_type_filter = st.sidebar.selectbox(
 # Apply filters
 filtered_df = df.copy()
 
-if 'Join Date' in df.columns and isinstance(date_range, tuple) and len(date_range) == 2:
+if date_range is not None and isinstance(date_range, tuple) and len(date_range) == 2:
     filtered_df = filtered_df[
         (filtered_df['Join Date'].dt.date >= date_range[0]) &
         (filtered_df['Join Date'].dt.date <= date_range[1])
@@ -200,22 +221,40 @@ if len(filtered_df) == 0:
 # ===================== KPI SECTION =====================
 kpis = calculate_kpis(filtered_df)
 
+# Calculate deltas vs full (unfiltered) dataset for context
+kpis_all = calculate_kpis(df)
+def _delta(filtered_val, all_val, suffix="", invert=False):
+    """Return delta string if filters are active, else None."""
+    if len(filtered_df) == len(df):
+        return None
+    diff = filtered_val - all_val
+    if abs(diff) < 0.05:
+        return None
+    return f"{diff:+.1f}{suffix}" if not invert else (f"{diff:+.1f}{suffix}", "inverse")
+
 st.subheader("Key Performance Indicators")
 row1 = st.columns(6)
 row1[0].metric("Total Employees", f"{kpis['total']:,}")
 row1[1].metric("Active", f"{kpis['active']:,}")
 row1[2].metric("Departed", f"{kpis['departed']:,}")
-row1[3].metric("Attrition Rate", f"{kpis['attrition_rate']:.1f}%")
-row1[4].metric("Retention Rate", f"{kpis['retention_rate']:.1f}%")
-row1[5].metric("Avg Tenure (Mo)", f"{kpis['avg_tenure']:.1f}")
+row1[3].metric("Attrition Rate", f"{kpis['attrition_rate']:.1f}%",
+               delta=_delta(kpis['attrition_rate'], kpis_all['attrition_rate'], '%', invert=True))
+row1[4].metric("Retention Rate", f"{kpis['retention_rate']:.1f}%",
+               delta=_delta(kpis['retention_rate'], kpis_all['retention_rate'], '%'))
+row1[5].metric("Avg Tenure (Mo)", f"{kpis['avg_tenure']:.1f}",
+               delta=_delta(kpis['avg_tenure'], kpis_all['avg_tenure']))
 
 row2 = st.columns(6)
 row2[0].metric("Avg Age", f"{kpis['avg_age']:.0f}" if not pd.isna(kpis['avg_age']) else "N/A")
 row2[1].metric("Gender (M:F)", kpis['gender_ratio'])
 row2[2].metric("Contractor %", f"{kpis['contractor_ratio']:.1f}%")
 row2[3].metric("Nationalities", f"{kpis['nationality_count']}")
-row2[4].metric("Probation Pass", f"{kpis['probation_pass_rate']:.1f}%")
+row2[4].metric("Probation Pass", f"{kpis['probation_pass_rate']:.1f}%",
+               delta=_delta(kpis['probation_pass_rate'], kpis_all['probation_pass_rate'], '%'))
 row2[5].metric("YoY Growth", f"{kpis['growth_rate']:+.1f}%")
+
+if len(filtered_df) < len(df):
+    st.caption(f"Deltas shown are vs. full dataset ({len(df)} records)")
 
 st.markdown("---")
 
@@ -249,7 +288,7 @@ with tabs[0]:
                      color_discrete_sequence=[COLORS['primary'], COLORS['pink']],
                      hole=0.4)
         fig.update_traces(textinfo='percent+value')
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True, config=CHART_CONFIG)
 
     with col2:
         st.subheader("Employee Status")
@@ -259,7 +298,7 @@ with tabs[0]:
                      color_discrete_sequence=[COLORS['success'], COLORS['danger']],
                      hole=0.4)
         fig.update_traces(textinfo='percent+value')
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True, config=CHART_CONFIG)
 
     st.markdown("---")
 
@@ -270,7 +309,7 @@ with tabs[0]:
                  color_discrete_map={'Active': COLORS['success'], 'Departed': COLORS['danger']},
                  barmode='group')
     fig.update_layout(xaxis_tickangle=-45, height=450)
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True, config=CHART_CONFIG)
 
     st.markdown("---")
 
@@ -283,7 +322,7 @@ with tabs[0]:
         fig = px.bar(pos_counts, x='Count', y='Position', orientation='h',
                      color='Count', color_continuous_scale='Blues')
         fig.update_layout(height=500, yaxis={'categoryorder': 'total ascending'})
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True, config=CHART_CONFIG)
 
     with col2:
         st.subheader("Age Distribution")
@@ -293,7 +332,7 @@ with tabs[0]:
                                color_discrete_sequence=[COLORS['primary']],
                                marginal='box')
             fig.update_layout(height=500)
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, use_container_width=True, config=CHART_CONFIG)
 
     # Nationality distribution
     if 'Nationality' in filtered_df.columns:
@@ -304,7 +343,7 @@ with tabs[0]:
         fig = px.pie(nat_counts, values='Count', names='Nationality',
                      color_discrete_sequence=COLOR_SEQUENCE)
         fig.update_traces(textinfo='percent+value')
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True, config=CHART_CONFIG)
 
 
 # ===================== TAB 2: ATTRITION ANALYSIS =====================
@@ -323,7 +362,7 @@ with tabs[1]:
             fig = px.pie(exit_counts, values='Count', names='Exit Type',
                          color_discrete_sequence=[COLORS['warning'], COLORS['danger'], COLORS['brown']])
             fig.update_traces(textinfo='percent+value')
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, use_container_width=True, config=CHART_CONFIG)
 
         with col2:
             st.subheader("Exit Reason Categories")
@@ -332,7 +371,7 @@ with tabs[1]:
             fig = px.bar(reason_counts, x='Count', y='Category', orientation='h',
                          color='Count', color_continuous_scale='Reds')
             fig.update_layout(height=400, yaxis={'categoryorder': 'total ascending'})
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, use_container_width=True, config=CHART_CONFIG)
 
         st.markdown("---")
 
@@ -354,7 +393,7 @@ with tabs[1]:
         fig = px.pie(vol_data, values='Count', names='Type',
                      color_discrete_sequence=[COLORS['warning'], COLORS['danger']], hole=0.4)
         fig.update_traces(textinfo='percent+value')
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True, config=CHART_CONFIG)
 
         st.markdown("---")
 
@@ -373,7 +412,7 @@ with tabs[1]:
                      text='Attrition Rate %')
         fig.update_traces(texttemplate='%{text:.1f}%', textposition='outside')
         fig.update_layout(xaxis_tickangle=-45, height=450)
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True, config=CHART_CONFIG)
 
         st.dataframe(dept_attrition, use_container_width=True, hide_index=True)
 
@@ -389,7 +428,7 @@ with tabs[1]:
                              color='Count', color_continuous_scale='Oranges')
                 fig.update_layout(height=max(300, len(reason_list) * 30),
                                   yaxis={'categoryorder': 'total ascending'})
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, use_container_width=True, config=CHART_CONFIG)
 
         st.markdown("---")
 
@@ -403,7 +442,7 @@ with tabs[1]:
                          color_continuous_scale='RdYlBu',
                          hover_data=['Top Exit Reason'])
             fig.update_layout(height=500, yaxis={'categoryorder': 'total ascending'})
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, use_container_width=True, config=CHART_CONFIG)
             st.dataframe(manager_data, use_container_width=True, hide_index=True)
         else:
             st.info("No manager attrition data available.")
@@ -425,7 +464,7 @@ with tabs[2]:
                        color_discrete_map={'Active': COLORS['success'], 'Departed': COLORS['danger']},
                        marginal='box')
     fig.update_layout(height=400)
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True, config=CHART_CONFIG)
 
     st.markdown("---")
 
@@ -440,7 +479,7 @@ with tabs[2]:
                  text='Avg Tenure', hover_data=['Median Tenure', 'Count'])
     fig.update_traces(texttemplate='%{text:.1f}', textposition='outside')
     fig.update_layout(xaxis_tickangle=-45, height=450)
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True, config=CHART_CONFIG)
 
     st.markdown("---")
 
@@ -463,7 +502,7 @@ with tabs[2]:
             yaxis2=dict(title='Retention Rate %', overlaying='y', side='right', range=[0, 105]),
             height=450, legend=dict(orientation='h', y=-0.15)
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True, config=CHART_CONFIG)
         st.dataframe(cohort, use_container_width=True, hide_index=True)
 
     st.markdown("---")
@@ -478,7 +517,7 @@ with tabs[2]:
             fig = px.pie(prob_counts, values='Count', names='Status',
                          color_discrete_sequence=COLOR_SEQUENCE, hole=0.4)
             fig.update_traces(textinfo='percent+value')
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, use_container_width=True, config=CHART_CONFIG)
 
             # Probation by department
             prob_dept = prob_data.groupby('Department')['Probation Completed'].apply(
@@ -492,7 +531,7 @@ with tabs[2]:
                          text='Pass Rate %')
             fig.update_traces(texttemplate='%{text:.1f}%', textposition='outside')
             fig.update_layout(xaxis_tickangle=-45, height=400)
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, use_container_width=True, config=CHART_CONFIG)
         else:
             st.info("No probation data available.")
     else:
@@ -516,7 +555,7 @@ with tabs[2]:
         fig = px.bar(early_reasons, x='Count', y='Reason', orientation='h',
                      color='Count', color_continuous_scale='Reds')
         fig.update_layout(height=300, yaxis={'categoryorder': 'total ascending'})
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True, config=CHART_CONFIG)
     else:
         st.info("No early leavers in current selection.")
 
@@ -534,14 +573,14 @@ with tabs[3]:
             fig = px.pie(type_counts, values='Count', names='Type',
                          color_discrete_sequence=COLOR_SEQUENCE, hole=0.4)
             fig.update_traces(textinfo='percent+value')
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, use_container_width=True, config=CHART_CONFIG)
 
         with col2:
             type_dept = filtered_df.groupby(['Department', 'Employment Type']).size().reset_index(name='Count')
             fig = px.bar(type_dept, x='Department', y='Count', color='Employment Type',
                          color_discrete_sequence=COLOR_SEQUENCE, barmode='stack')
             fig.update_layout(xaxis_tickangle=-45, height=400)
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, use_container_width=True, config=CHART_CONFIG)
 
     st.markdown("---")
 
@@ -556,7 +595,7 @@ with tabs[3]:
             fig = px.pie(vendor_counts, values='Count', names='Vendor',
                          color_discrete_sequence=COLOR_SEQUENCE, hole=0.4)
             fig.update_traces(textinfo='percent+value')
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, use_container_width=True, config=CHART_CONFIG)
 
         with col2:
             vendor_status = filtered_df.groupby(['Vendor', 'Employee Status']).size().reset_index(name='Count')
@@ -564,7 +603,7 @@ with tabs[3]:
                          color_discrete_map={'Active': COLORS['success'], 'Departed': COLORS['danger']},
                          barmode='group')
             fig.update_layout(height=400)
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, use_container_width=True, config=CHART_CONFIG)
 
         # Vendor attrition rates
         vendor_attrition = filtered_df.groupby('Vendor').agg(
@@ -592,7 +631,7 @@ with tabs[3]:
             fig = px.bar(change_dept, x='Department', y='Changes',
                          color='Changes', color_continuous_scale='Blues')
             fig.update_layout(xaxis_tickangle=-45, height=350)
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, use_container_width=True, config=CHART_CONFIG)
 
     st.markdown("---")
 
@@ -605,11 +644,13 @@ with tabs[3]:
             fig = px.area(comp_time, x='Join Year', y='Count', color='Employment Type',
                           color_discrete_sequence=COLOR_SEQUENCE)
             fig.update_layout(height=400)
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, use_container_width=True, config=CHART_CONFIG)
 
 
 # ===================== TAB 5: TRENDS =====================
 with tabs[4]:
+    trends_dep_df = filtered_df[filtered_df['Employee Status'] == 'Departed']
+
     col1, col2 = st.columns(2)
 
     with col1:
@@ -620,27 +661,29 @@ with tabs[4]:
                       color_discrete_sequence=[COLORS['success']])
         fig.update_traces(line_width=3)
         fig.update_layout(height=350)
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True, config=CHART_CONFIG)
 
     with col2:
         st.subheader("Attrition Trend by Year")
-        dep_df = filtered_df[filtered_df['Employee Status'] == 'Departed']
-        if len(dep_df) > 0:
-            attrition = dep_df.groupby('Exit Year').size().reset_index(name='Exits')
+        if len(trends_dep_df) > 0:
+            attrition = trends_dep_df.groupby('Exit Year').size().reset_index(name='Exits')
             attrition = attrition[attrition['Exit Year'] > 2000]
             fig = px.line(attrition, x='Exit Year', y='Exits', markers=True,
                           color_discrete_sequence=[COLORS['danger']])
             fig.update_traces(line_width=3)
             fig.update_layout(height=350)
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, use_container_width=True, config=CHART_CONFIG)
+        else:
+            st.info("No departed employees in current selection.")
 
     st.markdown("---")
 
     # Net headcount change
     st.subheader("Net Headcount Change by Year")
+    net_df = pd.DataFrame()
     if 'Join Year' in filtered_df.columns:
         hires_yr = filtered_df.groupby('Join Year').size().rename('Hires')
-        exits_yr = dep_df.groupby('Exit Year').size().rename('Exits') if len(dep_df) > 0 else pd.Series(dtype=int)
+        exits_yr = trends_dep_df.groupby('Exit Year').size().rename('Exits') if len(trends_dep_df) > 0 else pd.Series(dtype=int)
 
         years = sorted(set(hires_yr.index.tolist() + exits_yr.index.tolist()))
         years = [y for y in years if y > 2000]
@@ -657,7 +700,7 @@ with tabs[4]:
         fig.add_trace(go.Scatter(x=net_df['Year'], y=net_df['Net Change'], name='Net Change',
                                  line=dict(color=COLORS['primary'], width=3), mode='lines+markers'))
         fig.update_layout(barmode='relative', height=450)
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True, config=CHART_CONFIG)
 
         st.dataframe(net_df, use_container_width=True, hide_index=True)
 
@@ -671,7 +714,7 @@ with tabs[4]:
         fig = px.bar(monthly, x='Join Month', y='Hires',
                      color_discrete_sequence=[COLORS['primary']])
         fig.update_layout(xaxis_tickangle=-45, height=350)
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True, config=CHART_CONFIG)
 
     st.markdown("---")
 
@@ -685,7 +728,7 @@ with tabs[4]:
                      color_discrete_map={'Active': COLORS['success'], 'Departed': COLORS['danger']},
                      barmode='stack')
         fig.update_layout(height=400)
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True, config=CHART_CONFIG)
         st.dataframe(headcount, use_container_width=True)
 
     st.markdown("---")
@@ -694,13 +737,14 @@ with tabs[4]:
     st.subheader("Hire-to-Exit Ratio by Year")
     if len(net_df) > 0:
         ratio_df = net_df[net_df['Exits'] > 0].copy()
-        ratio_df['Ratio'] = (ratio_df['Hires'] / ratio_df['Exits']).round(2)
-        fig = px.line(ratio_df, x='Year', y='Ratio', markers=True,
-                      color_discrete_sequence=[COLORS['purple']])
-        fig.add_hline(y=1, line_dash="dash", line_color="gray",
-                      annotation_text="Breakeven (1:1)")
-        fig.update_layout(height=350)
-        st.plotly_chart(fig, use_container_width=True)
+        if len(ratio_df) > 0:
+            ratio_df['Ratio'] = (ratio_df['Hires'] / ratio_df['Exits']).round(2)
+            fig = px.line(ratio_df, x='Year', y='Ratio', markers=True,
+                          color_discrete_sequence=[COLORS['purple']])
+            fig.add_hline(y=1, line_dash="dash", line_color="gray",
+                          annotation_text="Breakeven (1:1)")
+            fig.update_layout(height=350)
+            st.plotly_chart(fig, use_container_width=True, config=CHART_CONFIG)
 
 
 # ===================== TAB 6: EMPLOYEE DATA =====================
@@ -731,8 +775,63 @@ with tabs[5]:
 
     st.markdown("---")
 
+    st.subheader("Export Data")
+    export_col1, export_col2, export_col3 = st.columns(3)
+
+    # CSV download
     csv = filtered_df.to_csv(index=False).encode('utf-8')
-    st.download_button("Download Filtered Data as CSV", csv, "hr_data_export.csv", "text/csv")
+    export_col1.download_button("Download as CSV", csv, "hr_data_export.csv", "text/csv")
+
+    # Excel download
+    excel_buffer = io.BytesIO()
+    filtered_df.to_excel(excel_buffer, index=False, engine='openpyxl')
+    excel_buffer.seek(0)
+    export_col2.download_button("Download as Excel", excel_buffer, "hr_data_export.xlsx",
+                                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+    # Summary report
+    summary_lines = [
+        "HR ANALYTICS SUMMARY REPORT",
+        f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}",
+        f"Data: {len(filtered_df)} records (filtered from {len(df)} total)",
+        "",
+        "=== KEY METRICS ===",
+        f"Total Employees: {kpis['total']:,}",
+        f"Active: {kpis['active']:,}",
+        f"Departed: {kpis['departed']:,}",
+        f"Attrition Rate: {kpis['attrition_rate']:.1f}%",
+        f"Retention Rate: {kpis['retention_rate']:.1f}%",
+        f"Avg Tenure: {kpis['avg_tenure']:.1f} months",
+        f"Avg Age: {kpis['avg_age']:.0f}" if not pd.isna(kpis['avg_age']) else "Avg Age: N/A",
+        f"Gender (M:F): {kpis['gender_ratio']}",
+        f"Contractor Ratio: {kpis['contractor_ratio']:.1f}%",
+        f"Nationalities: {kpis['nationality_count']}",
+        f"Probation Pass Rate: {kpis['probation_pass_rate']:.1f}%",
+        f"YoY Growth: {kpis['growth_rate']:+.1f}%",
+        "",
+        "=== DEPARTMENT BREAKDOWN ===",
+    ]
+    dept_summary = filtered_df.groupby('Department').agg(
+        Total=('Employee Status', 'count'),
+        Active=('Employee Status', lambda x: (x == 'Active').sum()),
+        Departed=('Employee Status', lambda x: (x == 'Departed').sum()),
+    ).reset_index()
+    dept_summary['Attrition %'] = (dept_summary['Departed'] / dept_summary['Total'] * 100).round(1)
+    for _, row in dept_summary.iterrows():
+        summary_lines.append(f"  {row['Department']}: {row['Total']} total, {row['Active']} active, {row['Departed']} departed ({row['Attrition %']}% attrition)")
+
+    summary_lines += [
+        "",
+        "=== TOP EXIT REASONS ===",
+    ]
+    departed_summary = filtered_df[filtered_df['Employee Status'] == 'Departed']
+    if len(departed_summary) > 0 and 'Exit Reason Category' in departed_summary.columns:
+        for reason, count in departed_summary['Exit Reason Category'].value_counts().head(10).items():
+            summary_lines.append(f"  {reason}: {count}")
+
+    summary_text = "\n".join(summary_lines)
+    export_col3.download_button("Download Summary Report", summary_text.encode('utf-8'),
+                                "hr_summary_report.txt", "text/plain")
 
     st.markdown("---")
     st.subheader("Quick Statistics")
@@ -820,7 +919,7 @@ if user_role in ('editor', 'admin'):
                         try:
                             save_to_excel(updated_df, DATA_FILE)
                             st.success(f"Added {new_name} successfully! Refresh the page to see changes.")
-                            st.cache_data.clear()
+                            st.rerun()
                         except Exception as e:
                             st.error(f"Error saving: {e}")
 
@@ -833,9 +932,14 @@ if user_role in ('editor', 'admin'):
                 if len(matches) == 0:
                     st.warning("No employees found.")
                 else:
-                    selected_name = st.selectbox("Select employee", matches['Full Name'].tolist())
-                    emp_row = df[df['Full Name'] == selected_name].iloc[0]
-                    emp_idx = df[df['Full Name'] == selected_name].index[0]
+                    # Show name + department + index to disambiguate duplicates
+                    match_labels = [
+                        f"{row['Full Name']} — {row.get('Department', 'N/A')} (#{idx})"
+                        for idx, row in matches.iterrows()
+                    ]
+                    selected_label = st.selectbox("Select employee", match_labels)
+                    emp_idx = int(selected_label.split('(#')[-1].rstrip(')'))
+                    emp_row = df.loc[emp_idx]
 
                     with st.form("edit_employee_form"):
                         ecol1, ecol2 = st.columns(2)
@@ -872,8 +976,8 @@ if user_role in ('editor', 'admin'):
 
                             try:
                                 save_to_excel(df, DATA_FILE)
-                                st.success(f"Updated {selected_name} successfully! Refresh to see changes.")
-                                st.cache_data.clear()
+                                st.success(f"Updated {emp_row['Full Name']} successfully! Refresh to see changes.")
+                                st.rerun()
                             except Exception as e:
                                 st.error(f"Error saving: {e}")
 
@@ -886,9 +990,15 @@ if user_role in ('editor', 'admin'):
                 if len(matches) == 0:
                     st.warning("No employees found.")
                 else:
-                    selected_del = st.selectbox("Select employee to delete", matches['Full Name'].tolist(),
-                                                key="del_select")
-                    emp_info = df[df['Full Name'] == selected_del].iloc[0]
+                    # Show name + department + index to disambiguate duplicates
+                    match_labels = [
+                        f"{row['Full Name']} — {row.get('Department', 'N/A')} (#{idx})"
+                        for idx, row in matches.iterrows()
+                    ]
+                    selected_del_label = st.selectbox("Select employee to delete", match_labels,
+                                                      key="del_select")
+                    del_idx = int(selected_del_label.split('(#')[-1].rstrip(')'))
+                    emp_info = df.loc[del_idx]
                     st.write(f"**Name:** {emp_info['Full Name']}")
                     st.write(f"**Department:** {emp_info['Department']}")
                     st.write(f"**Status:** {emp_info['Employee Status']}")
@@ -896,11 +1006,11 @@ if user_role in ('editor', 'admin'):
                     confirm = st.checkbox("I confirm I want to delete this record", key="del_confirm")
 
                     if st.button("Delete Record", type="primary", disabled=not confirm):
-                        updated_df = df[df['Full Name'] != selected_del]
+                        updated_df = df.drop(index=del_idx)
                         try:
                             save_to_excel(updated_df, DATA_FILE)
-                            st.success(f"Deleted {selected_del}. Refresh to see changes.")
-                            st.cache_data.clear()
+                            st.success(f"Deleted {emp_info['Full Name']}. Refresh to see changes.")
+                            st.rerun()
                         except Exception as e:
                             st.error(f"Error saving: {e}")
 
@@ -931,8 +1041,8 @@ if user_role == 'admin':
                 pw_submitted = st.form_submit_button("Update Password")
 
                 if pw_submitted:
-                    if not new_pw or len(new_pw) < 4:
-                        st.error("Password must be at least 4 characters.")
+                    if not new_pw or len(new_pw) < 8:
+                        st.error("Password must be at least 8 characters.")
                     elif new_pw != confirm_pw:
                         st.error("Passwords do not match.")
                     else:
@@ -960,8 +1070,8 @@ if user_role == 'admin':
                         st.error("Username is required.")
                     elif add_username in config['credentials']['usernames']:
                         st.error(f"Username **{add_username}** already exists.")
-                    elif not add_password or len(add_password) < 4:
-                        st.error("Password must be at least 4 characters.")
+                    elif not add_password or len(add_password) < 8:
+                        st.error("Password must be at least 8 characters.")
                     elif not add_name:
                         st.error("Display Name is required.")
                     else:
