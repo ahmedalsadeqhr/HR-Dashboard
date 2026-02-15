@@ -85,6 +85,18 @@ if df is None:
     st.warning("No data loaded. Please upload the Master Sheet to get started.")
     st.stop()
 
+# Detect name column (handles variations like 'Full Name', 'Full  Name', 'FullName', etc.)
+NAME_COL = None
+for c in df.columns:
+    if 'full' in str(c).lower() and 'name' in str(c).lower():
+        NAME_COL = c
+        break
+if NAME_COL is None:
+    for c in df.columns:
+        if 'name' in str(c).lower() and c != 'Bank Name':
+            NAME_COL = c
+            break
+
 
 # ===================== SIDEBAR FILTERS =====================
 st.sidebar.markdown("---")
@@ -700,10 +712,10 @@ with tabs[5]:
 
     search = st.text_input("Search by name", key="emp_search")
     display_df = filtered_df.copy()
-    if search:
-        display_df = display_df[display_df['Full Name'].str.contains(search, case=False, na=False)]
+    if search and NAME_COL:
+        display_df = display_df[display_df[NAME_COL].str.contains(search, case=False, na=False)]
 
-    all_cols = ['Full Name', 'Gender', 'Age', 'Nationality', 'Department', 'Position',
+    all_cols = [NAME_COL, 'Gender', 'Age', 'Nationality', 'Department', 'Position',
                 'Employment Type', 'Vendor', 'Employee Status', 'Join Date', 'Exit Date',
                 'Exit Type', 'Exit Reason Category', 'Exit Reason', 'Tenure (Months)',
                 'Probation Completed', 'Position After Joining']
@@ -931,7 +943,7 @@ with tabs[6]:
 
         # Risk scatter plot
         fig = px.scatter(active_df[active_df['Age'] > 0], x='Tenure (Months)', y='Age',
-                         color='Department', hover_data=['Full Name'] if 'Full Name' in active_df.columns else None,
+                         color='Department', hover_data=[NAME_COL] if NAME_COL and NAME_COL in active_df.columns else None,
                          color_discrete_sequence=COLOR_SEQUENCE)
         # Add risk zones
         fig.add_hrect(y0=55, y1=active_df['Age'].max() + 5, fillcolor="red", opacity=0.08,
@@ -1185,7 +1197,7 @@ with tabs[7]:
                     st.error("Exit Date is required for departed employees.")
                 else:
                     new_row = {
-                        'Full Name': new_name,
+                        NAME_COL or 'Full Name': new_name,
                         'Gender': new_gender,
                         'Birthday Date': pd.Timestamp(new_birthday),
                         'Nationality': new_nationality,
@@ -1215,12 +1227,12 @@ with tabs[7]:
         search_edit = st.text_input("Search employee by name", key="edit_search")
 
         if search_edit:
-            matches = df[df['Full Name'].str.contains(search_edit, case=False, na=False)]
+            matches = df[df[NAME_COL].str.contains(search_edit, case=False, na=False)]
             if len(matches) == 0:
                 st.warning("No employees found.")
             else:
                 match_labels = [
-                    f"{row['Full Name']} — {row.get('Department', 'N/A')} (#{idx})"
+                    f"{row[NAME_COL]} — {row.get('Department', 'N/A')} (#{idx})"
                     for idx, row in matches.iterrows()
                 ]
                 selected_label = st.selectbox("Select employee", match_labels)
@@ -1262,7 +1274,7 @@ with tabs[7]:
 
                         try:
                             save_to_excel(df, DATA_FILE)
-                            st.success(f"Updated {emp_row['Full Name']} successfully! Refresh to see changes.")
+                            st.success(f"Updated {emp_row[NAME_COL]} successfully! Refresh to see changes.")
                             st.rerun()
                         except Exception as e:
                             st.error(f"Error saving: {e}")
@@ -1272,19 +1284,19 @@ with tabs[7]:
         search_del = st.text_input("Search employee by name", key="del_search")
 
         if search_del:
-            matches = df[df['Full Name'].str.contains(search_del, case=False, na=False)]
+            matches = df[df[NAME_COL].str.contains(search_del, case=False, na=False)]
             if len(matches) == 0:
                 st.warning("No employees found.")
             else:
                 match_labels = [
-                    f"{row['Full Name']} — {row.get('Department', 'N/A')} (#{idx})"
+                    f"{row[NAME_COL]} — {row.get('Department', 'N/A')} (#{idx})"
                     for idx, row in matches.iterrows()
                 ]
                 selected_del_label = st.selectbox("Select employee to delete", match_labels,
                                                   key="del_select")
                 del_idx = int(selected_del_label.split('(#')[-1].rstrip(')'))
                 emp_info = df.loc[del_idx]
-                st.write(f"**Name:** {emp_info['Full Name']}")
+                st.write(f"**Name:** {emp_info[NAME_COL]}")
                 st.write(f"**Department:** {emp_info['Department']}")
                 st.write(f"**Status:** {emp_info['Employee Status']}")
 
@@ -1294,7 +1306,7 @@ with tabs[7]:
                     updated_df = df.drop(index=del_idx)
                     try:
                         save_to_excel(updated_df, DATA_FILE)
-                        st.success(f"Deleted {emp_info['Full Name']}. Refresh to see changes.")
+                        st.success(f"Deleted {emp_info[NAME_COL] if NAME_COL else 'record'}. Refresh to see changes.")
                         st.rerun()
                     except Exception as e:
                         st.error(f"Error saving: {e}")
