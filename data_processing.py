@@ -187,14 +187,35 @@ def get_manager_attrition(df):
     if len(departed) == 0:
         return pd.DataFrame()
 
-    manager_data = departed[departed[col].notna()].groupby(col).agg(
-        Departures=('Full Name', 'count'),
-        Avg_Tenure=('Tenure (Months)', 'mean'),
-        Top_Reason=('Exit Reason Category', lambda x: x.mode().iloc[0] if len(x.mode()) > 0 else 'N/A')
-    ).reset_index()
+    mgr_df = departed[departed[col].notna()]
+    if len(mgr_df) == 0:
+        return pd.DataFrame()
 
-    manager_data.columns = ['Manager CRM', 'Departures', 'Avg Tenure (Months)', 'Top Exit Reason']
-    manager_data['Avg Tenure (Months)'] = manager_data['Avg Tenure (Months)'].round(1)
+    # Use whichever columns are available
+    count_col = 'Full Name' if 'Full Name' in mgr_df.columns else mgr_df.columns[0]
+    has_tenure = 'Tenure (Months)' in mgr_df.columns
+    has_reason = 'Exit Reason Category' in mgr_df.columns
+
+    agg_dict = {
+        'Departures': (count_col, 'count'),
+    }
+    if has_tenure:
+        agg_dict['Avg_Tenure'] = ('Tenure (Months)', 'mean')
+    if has_reason:
+        agg_dict['Top_Reason'] = ('Exit Reason Category', lambda x: x.mode().iloc[0] if len(x.mode()) > 0 else 'N/A')
+
+    manager_data = mgr_df.groupby(col).agg(**agg_dict).reset_index()
+
+    # Standardize column names
+    rename = {col: 'Manager CRM', 'Departures': 'Departures'}
+    if has_tenure:
+        rename['Avg_Tenure'] = 'Avg Tenure (Months)'
+    if has_reason:
+        rename['Top_Reason'] = 'Top Exit Reason'
+    manager_data = manager_data.rename(columns=rename)
+
+    if 'Avg Tenure (Months)' in manager_data.columns:
+        manager_data['Avg Tenure (Months)'] = manager_data['Avg Tenure (Months)'].round(1)
     return manager_data.sort_values('Departures', ascending=False)
 
 
