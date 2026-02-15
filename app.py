@@ -396,10 +396,13 @@ with tabs[1]:
         manager_data = get_manager_attrition(filtered_df)
         if len(manager_data) > 0:
             st.markdown("*Which managers had the most departures under them?*")
-            fig = px.bar(manager_data.head(15), x='Departures', y='Manager CRM',
-                         orientation='h', color='Avg Tenure (Months)',
-                         color_continuous_scale='RdYlBu',
-                         hover_data=['Top Exit Reason'])
+            mgr_chart_kwargs = dict(x='Departures', y='Manager CRM', orientation='h')
+            if 'Avg Tenure (Months)' in manager_data.columns:
+                mgr_chart_kwargs['color'] = 'Avg Tenure (Months)'
+                mgr_chart_kwargs['color_continuous_scale'] = 'RdYlBu'
+            if 'Top Exit Reason' in manager_data.columns:
+                mgr_chart_kwargs['hover_data'] = ['Top Exit Reason']
+            fig = px.bar(manager_data.head(15), **mgr_chart_kwargs)
             fig.update_layout(height=500, yaxis={'categoryorder': 'total ascending'})
             st.plotly_chart(fig, use_container_width=True, config=CHART_CONFIG)
             st.dataframe(manager_data, use_container_width=True, hide_index=True)
