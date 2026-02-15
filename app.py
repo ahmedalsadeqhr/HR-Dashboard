@@ -3,12 +3,10 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
-import yaml
 import os
 import io
 from datetime import datetime
 
-import streamlit_authenticator as stauth
 from data_processing import load_excel, process_data, calculate_kpis, get_cohort_retention, get_manager_attrition, save_to_excel
 
 # ===================== PAGE CONFIG =====================
@@ -45,59 +43,8 @@ CHART_CONFIG = {
 }
 
 
-# ===================== AUTHENTICATION =====================
-def load_auth_config():
-    config_path = os.path.join(os.path.dirname(__file__), 'auth_config.yaml')
-    with open(config_path, 'r') as f:
-        return yaml.safe_load(f)
-
-
-def save_auth_config(config):
-    config_path = os.path.join(os.path.dirname(__file__), 'auth_config.yaml')
-    with open(config_path, 'w') as f:
-        yaml.dump(config, f, default_flow_style=False)
-
-
-def get_user_role(config, username):
-    if username and username in config['credentials']['usernames']:
-        return config['credentials']['usernames'][username].get('role', 'viewer')
-    return 'viewer'
-
-
-config = load_auth_config()
-
-cookie_key = os.environ.get('HR_DASHBOARD_COOKIE_KEY', config['cookie']['key'])
-
-authenticator = stauth.Authenticate(
-    config['credentials'],
-    config['cookie']['name'],
-    cookie_key,
-    config['cookie']['expiry_days'],
-)
-
-authenticator.login()
-
-if st.session_state.get("authentication_status") is None:
-    st.title("📊 HR Analytics Dashboard")
-    st.info("Please enter your credentials to access the dashboard.")
-    st.stop()
-
-if st.session_state.get("authentication_status") is False:
-    st.error("Username or password is incorrect.")
-    st.stop()
-
-# User is authenticated
-username = st.session_state.get("username", "")
-user_role = get_user_role(config, username)
-user_name = st.session_state.get("name", username)
-
 # ===================== HEADER =====================
-header_col1, header_col2 = st.columns([3, 1])
-with header_col1:
-    st.title("📊 HR Analytics Dashboard")
-with header_col2:
-    st.markdown(f"**{user_name}** ({user_role.upper()})")
-    authenticator.logout("Logout", "main")
+st.title("📊 HR Analytics Dashboard")
 
 # ===================== DATA LOADING =====================
 st.sidebar.header("📁 Data Source")
@@ -269,11 +216,8 @@ tab_names = [
     "🏗️ Workforce Composition",
     "📅 Trends",
     "📋 Employee Data",
+    "✏️ Edit Data",
 ]
-if user_role in ('editor', 'admin'):
-    tab_names.append("✏️ Edit Data")
-if user_role == 'admin':
-    tab_names.append("👤 User Management")
 
 tabs = st.tabs(tab_names)
 
@@ -855,269 +799,162 @@ with tabs[5]:
             st.write(f"- Nationalities: {filtered_df['Nationality'].nunique()}")
 
 
-# ===================== TAB 7: EDIT DATA (editor/admin only) =====================
-if user_role in ('editor', 'admin'):
-    with tabs[6]:
-        st.subheader("Edit Employee Data")
-        st.caption(f"Logged in as: **{user_name}** (Role: {user_role})")
+# ===================== TAB 7: EDIT DATA =====================
+with tabs[6]:
+    st.subheader("Edit Employee Data")
 
-        edit_action = st.radio("Action", ["Add New Employee", "Edit Existing", "Delete Record"],
-                               horizontal=True)
+    edit_action = st.radio("Action", ["Add New Employee", "Edit Existing", "Delete Record"],
+                           horizontal=True)
 
-        if edit_action == "Add New Employee":
-            st.markdown("### Add New Employee")
-            with st.form("add_employee_form"):
-                form_col1, form_col2 = st.columns(2)
+    if edit_action == "Add New Employee":
+        st.markdown("### Add New Employee")
+        with st.form("add_employee_form"):
+            form_col1, form_col2 = st.columns(2)
 
-                with form_col1:
-                    new_name = st.text_input("Full Name *")
-                    new_gender = st.selectbox("Gender *", ["M", "F"])
-                    new_birthday = st.date_input("Birthday Date *",
-                                                 value=datetime(1995, 1, 1),
-                                                 min_value=datetime(1950, 1, 1))
-                    new_nationality = st.text_input("Nationality", value="")
-                    new_department = st.selectbox("Department *",
-                                                  sorted(df['Department'].dropna().unique().tolist()))
-                    new_position = st.selectbox("Position *",
-                                                sorted(df['Position'].dropna().unique().tolist()))
+            with form_col1:
+                new_name = st.text_input("Full Name *")
+                new_gender = st.selectbox("Gender *", ["M", "F"])
+                new_birthday = st.date_input("Birthday Date *",
+                                             value=datetime(1995, 1, 1),
+                                             min_value=datetime(1950, 1, 1))
+                new_nationality = st.text_input("Nationality", value="")
+                new_department = st.selectbox("Department *",
+                                              sorted(df['Department'].dropna().unique().tolist()))
+                new_position = st.selectbox("Position *",
+                                            sorted(df['Position'].dropna().unique().tolist()))
 
-                with form_col2:
-                    new_status = st.selectbox("Employee Status *", ["Active", "Departed"])
-                    new_join_date = st.date_input("Join Date *")
-                    new_exit_date = st.date_input("Exit Date (if departed)",
-                                                  value=None)
-                    emp_types_list = df['Employment Type'].dropna().unique().tolist() if 'Employment Type' in df.columns else ['Full time']
-                    new_type = st.selectbox("Employment Type", emp_types_list)
-                    new_exit_type = st.selectbox("Exit Type", ["", "Resigned", "Terminated", "Dropped"])
-                    new_exit_reason = st.text_input("Exit Reason Category", value="")
+            with form_col2:
+                new_status = st.selectbox("Employee Status *", ["Active", "Departed"])
+                new_join_date = st.date_input("Join Date *")
+                new_exit_date = st.date_input("Exit Date (if departed)",
+                                              value=None)
+                emp_types_list = df['Employment Type'].dropna().unique().tolist() if 'Employment Type' in df.columns else ['Full time']
+                new_type = st.selectbox("Employment Type", emp_types_list)
+                new_exit_type = st.selectbox("Exit Type", ["", "Resigned", "Terminated", "Dropped"])
+                new_exit_reason = st.text_input("Exit Reason Category", value="")
 
-                submitted = st.form_submit_button("Add Employee")
+            submitted = st.form_submit_button("Add Employee")
 
-                if submitted:
-                    if not new_name:
-                        st.error("Full Name is required.")
-                    elif new_status == "Departed" and new_exit_date is None:
-                        st.error("Exit Date is required for departed employees.")
-                    else:
-                        new_row = {
-                            'Full Name': new_name,
-                            'Gender': new_gender,
-                            'Birthday Date': pd.Timestamp(new_birthday),
-                            'Nationality': new_nationality,
-                            'Department': new_department,
-                            'Position': new_position,
-                            'Employee Status': new_status,
-                            'Join Date': pd.Timestamp(new_join_date),
-                            'Type': new_type,
-                        }
-                        if new_exit_date:
-                            new_row['Exit Date'] = pd.Timestamp(new_exit_date)
-                        if new_exit_type:
-                            new_row['Exit Type'] = new_exit_type
-                        if new_exit_reason:
-                            new_row['Exit Reason Category'] = new_exit_reason
-
-                        updated_df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
-                        try:
-                            save_to_excel(updated_df, DATA_FILE)
-                            st.success(f"Added {new_name} successfully! Refresh the page to see changes.")
-                            st.rerun()
-                        except Exception as e:
-                            st.error(f"Error saving: {e}")
-
-        elif edit_action == "Edit Existing":
-            st.markdown("### Edit Existing Employee")
-            search_edit = st.text_input("Search employee by name", key="edit_search")
-
-            if search_edit:
-                matches = df[df['Full Name'].str.contains(search_edit, case=False, na=False)]
-                if len(matches) == 0:
-                    st.warning("No employees found.")
+            if submitted:
+                if not new_name:
+                    st.error("Full Name is required.")
+                elif new_status == "Departed" and new_exit_date is None:
+                    st.error("Exit Date is required for departed employees.")
                 else:
-                    # Show name + department + index to disambiguate duplicates
-                    match_labels = [
-                        f"{row['Full Name']} — {row.get('Department', 'N/A')} (#{idx})"
-                        for idx, row in matches.iterrows()
-                    ]
-                    selected_label = st.selectbox("Select employee", match_labels)
-                    emp_idx = int(selected_label.split('(#')[-1].rstrip(')'))
-                    emp_row = df.loc[emp_idx]
+                    new_row = {
+                        'Full Name': new_name,
+                        'Gender': new_gender,
+                        'Birthday Date': pd.Timestamp(new_birthday),
+                        'Nationality': new_nationality,
+                        'Department': new_department,
+                        'Position': new_position,
+                        'Employee Status': new_status,
+                        'Join Date': pd.Timestamp(new_join_date),
+                        'Type': new_type,
+                    }
+                    if new_exit_date:
+                        new_row['Exit Date'] = pd.Timestamp(new_exit_date)
+                    if new_exit_type:
+                        new_row['Exit Type'] = new_exit_type
+                    if new_exit_reason:
+                        new_row['Exit Reason Category'] = new_exit_reason
 
-                    with st.form("edit_employee_form"):
-                        ecol1, ecol2 = st.columns(2)
+                    updated_df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
+                    try:
+                        save_to_excel(updated_df, DATA_FILE)
+                        st.success(f"Added {new_name} successfully! Refresh the page to see changes.")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Error saving: {e}")
 
-                        with ecol1:
-                            edit_dept = st.selectbox("Department",
-                                                     sorted(df['Department'].dropna().unique().tolist()),
-                                                     index=sorted(df['Department'].dropna().unique().tolist()).index(emp_row['Department']) if emp_row['Department'] in df['Department'].dropna().unique().tolist() else 0)
-                            edit_position = st.text_input("Position", value=str(emp_row.get('Position', '')))
-                            edit_status = st.selectbox("Employee Status", ["Active", "Departed"],
-                                                       index=0 if emp_row.get('Employee Status') == 'Active' else 1)
+    elif edit_action == "Edit Existing":
+        st.markdown("### Edit Existing Employee")
+        search_edit = st.text_input("Search employee by name", key="edit_search")
 
-                        with ecol2:
-                            edit_exit_date = st.date_input("Exit Date",
-                                                           value=emp_row['Exit Date'].date() if pd.notna(emp_row.get('Exit Date')) else None)
-                            edit_exit_type = st.selectbox("Exit Type",
-                                                          ["", "Resigned", "Terminated", "Dropped"],
-                                                          index=["", "Resigned", "Terminated", "Dropped"].index(emp_row['Exit Type']) if pd.notna(emp_row.get('Exit Type')) and emp_row['Exit Type'] in ["Resigned", "Terminated", "Dropped"] else 0)
-                            edit_exit_reason = st.text_input("Exit Reason Category",
-                                                              value=str(emp_row.get('Exit Reason Category', '')) if pd.notna(emp_row.get('Exit Reason Category')) else "")
-
-                        edit_submitted = st.form_submit_button("Save Changes")
-
-                        if edit_submitted:
-                            df.at[emp_idx, 'Department'] = edit_dept
-                            df.at[emp_idx, 'Position'] = edit_position
-                            df.at[emp_idx, 'Employee Status'] = edit_status
-                            if edit_exit_date:
-                                df.at[emp_idx, 'Exit Date'] = pd.Timestamp(edit_exit_date)
-                            if edit_exit_type:
-                                df.at[emp_idx, 'Exit Type'] = edit_exit_type
-                            if edit_exit_reason:
-                                df.at[emp_idx, 'Exit Reason Category'] = edit_exit_reason
-
-                            try:
-                                save_to_excel(df, DATA_FILE)
-                                st.success(f"Updated {emp_row['Full Name']} successfully! Refresh to see changes.")
-                                st.rerun()
-                            except Exception as e:
-                                st.error(f"Error saving: {e}")
-
-        elif edit_action == "Delete Record":
-            st.markdown("### Delete Employee Record")
-            search_del = st.text_input("Search employee by name", key="del_search")
-
-            if search_del:
-                matches = df[df['Full Name'].str.contains(search_del, case=False, na=False)]
-                if len(matches) == 0:
-                    st.warning("No employees found.")
-                else:
-                    # Show name + department + index to disambiguate duplicates
-                    match_labels = [
-                        f"{row['Full Name']} — {row.get('Department', 'N/A')} (#{idx})"
-                        for idx, row in matches.iterrows()
-                    ]
-                    selected_del_label = st.selectbox("Select employee to delete", match_labels,
-                                                      key="del_select")
-                    del_idx = int(selected_del_label.split('(#')[-1].rstrip(')'))
-                    emp_info = df.loc[del_idx]
-                    st.write(f"**Name:** {emp_info['Full Name']}")
-                    st.write(f"**Department:** {emp_info['Department']}")
-                    st.write(f"**Status:** {emp_info['Employee Status']}")
-
-                    confirm = st.checkbox("I confirm I want to delete this record", key="del_confirm")
-
-                    if st.button("Delete Record", type="primary", disabled=not confirm):
-                        updated_df = df.drop(index=del_idx)
-                        try:
-                            save_to_excel(updated_df, DATA_FILE)
-                            st.success(f"Deleted {emp_info['Full Name']}. Refresh to see changes.")
-                            st.rerun()
-                        except Exception as e:
-                            st.error(f"Error saving: {e}")
-
-
-# ===================== TAB 8: USER MANAGEMENT (admin only) =====================
-if user_role == 'admin':
-    # Tab index: 6 (overview..employee data) + 1 (edit data) = 7
-    with tabs[7]:
-        st.subheader("User Management")
-        st.caption("Manage dashboard user accounts and credentials.")
-
-        manage_action = st.radio("Action", ["Change Password", "Add New User", "Remove User"],
-                                 horizontal=True, key="user_mgmt_action")
-
-        # --- Change Password ---
-        if manage_action == "Change Password":
-            st.markdown("### Change User Password")
-            all_users = list(config['credentials']['usernames'].keys())
-            target_user = st.selectbox("Select user", all_users, key="pw_user")
-
-            user_info = config['credentials']['usernames'][target_user]
-            st.write(f"**Name:** {user_info['name']}")
-            st.write(f"**Role:** {user_info.get('role', 'viewer')}")
-
-            with st.form("change_password_form"):
-                new_pw = st.text_input("New Password", type="password", key="new_pw")
-                confirm_pw = st.text_input("Confirm Password", type="password", key="confirm_pw")
-                pw_submitted = st.form_submit_button("Update Password")
-
-                if pw_submitted:
-                    if not new_pw or len(new_pw) < 8:
-                        st.error("Password must be at least 8 characters.")
-                    elif new_pw != confirm_pw:
-                        st.error("Passwords do not match.")
-                    else:
-                        hashed = stauth.Hasher.hash(new_pw)
-                        config['credentials']['usernames'][target_user]['password'] = hashed
-                        save_auth_config(config)
-                        st.success(f"Password updated for **{target_user}**. The user can log in with the new password.")
-
-        # --- Add New User ---
-        elif manage_action == "Add New User":
-            st.markdown("### Add New User")
-            with st.form("add_user_form"):
-                acol1, acol2 = st.columns(2)
-                with acol1:
-                    add_username = st.text_input("Username", key="add_uname")
-                    add_name = st.text_input("Display Name", key="add_dname")
-                with acol2:
-                    add_password = st.text_input("Password", type="password", key="add_pw")
-                    add_role = st.selectbox("Role", ["viewer", "editor", "admin"], key="add_role")
-
-                add_submitted = st.form_submit_button("Create User")
-
-                if add_submitted:
-                    if not add_username or not add_username.strip():
-                        st.error("Username is required.")
-                    elif add_username in config['credentials']['usernames']:
-                        st.error(f"Username **{add_username}** already exists.")
-                    elif not add_password or len(add_password) < 8:
-                        st.error("Password must be at least 8 characters.")
-                    elif not add_name:
-                        st.error("Display Name is required.")
-                    else:
-                        hashed = stauth.Hasher.hash(add_password)
-                        config['credentials']['usernames'][add_username] = {
-                            'name': add_name,
-                            'password': hashed,
-                            'role': add_role,
-                        }
-                        save_auth_config(config)
-                        st.success(f"User **{add_username}** created with role **{add_role}**.")
-
-        # --- Remove User ---
-        elif manage_action == "Remove User":
-            st.markdown("### Remove User")
-            all_users = list(config['credentials']['usernames'].keys())
-            removable = [u for u in all_users if u != username]  # Can't remove yourself
-
-            if not removable:
-                st.info("No other users to remove.")
+        if search_edit:
+            matches = df[df['Full Name'].str.contains(search_edit, case=False, na=False)]
+            if len(matches) == 0:
+                st.warning("No employees found.")
             else:
-                del_user = st.selectbox("Select user to remove", removable, key="del_user")
-                user_info = config['credentials']['usernames'][del_user]
-                st.write(f"**Name:** {user_info['name']}")
-                st.write(f"**Role:** {user_info.get('role', 'viewer')}")
+                match_labels = [
+                    f"{row['Full Name']} — {row.get('Department', 'N/A')} (#{idx})"
+                    for idx, row in matches.iterrows()
+                ]
+                selected_label = st.selectbox("Select employee", match_labels)
+                emp_idx = int(selected_label.split('(#')[-1].rstrip(')'))
+                emp_row = df.loc[emp_idx]
 
-                confirm_del = st.checkbox("I confirm I want to remove this user", key="del_user_confirm")
-                if st.button("Remove User", type="primary", disabled=not confirm_del, key="del_user_btn"):
-                    del config['credentials']['usernames'][del_user]
-                    save_auth_config(config)
-                    st.success(f"User **{del_user}** has been removed.")
+                with st.form("edit_employee_form"):
+                    ecol1, ecol2 = st.columns(2)
 
-        st.markdown("---")
+                    with ecol1:
+                        edit_dept = st.selectbox("Department",
+                                                 sorted(df['Department'].dropna().unique().tolist()),
+                                                 index=sorted(df['Department'].dropna().unique().tolist()).index(emp_row['Department']) if emp_row['Department'] in df['Department'].dropna().unique().tolist() else 0)
+                        edit_position = st.text_input("Position", value=str(emp_row.get('Position', '')))
+                        edit_status = st.selectbox("Employee Status", ["Active", "Departed"],
+                                                   index=0 if emp_row.get('Employee Status') == 'Active' else 1)
 
-        # Show current users table
-        st.subheader("Current Users")
-        users_table = []
-        for uname, udata in config['credentials']['usernames'].items():
-            users_table.append({
-                'Username': uname,
-                'Display Name': udata.get('name', ''),
-                'Role': udata.get('role', 'viewer'),
-            })
-        st.dataframe(pd.DataFrame(users_table), use_container_width=True, hide_index=True)
+                    with ecol2:
+                        edit_exit_date = st.date_input("Exit Date",
+                                                       value=emp_row['Exit Date'].date() if pd.notna(emp_row.get('Exit Date')) else None)
+                        edit_exit_type = st.selectbox("Exit Type",
+                                                      ["", "Resigned", "Terminated", "Dropped"],
+                                                      index=["", "Resigned", "Terminated", "Dropped"].index(emp_row['Exit Type']) if pd.notna(emp_row.get('Exit Type')) and emp_row['Exit Type'] in ["Resigned", "Terminated", "Dropped"] else 0)
+                        edit_exit_reason = st.text_input("Exit Reason Category",
+                                                          value=str(emp_row.get('Exit Reason Category', '')) if pd.notna(emp_row.get('Exit Reason Category')) else "")
+
+                    edit_submitted = st.form_submit_button("Save Changes")
+
+                    if edit_submitted:
+                        df.at[emp_idx, 'Department'] = edit_dept
+                        df.at[emp_idx, 'Position'] = edit_position
+                        df.at[emp_idx, 'Employee Status'] = edit_status
+                        if edit_exit_date:
+                            df.at[emp_idx, 'Exit Date'] = pd.Timestamp(edit_exit_date)
+                        if edit_exit_type:
+                            df.at[emp_idx, 'Exit Type'] = edit_exit_type
+                        if edit_exit_reason:
+                            df.at[emp_idx, 'Exit Reason Category'] = edit_exit_reason
+
+                        try:
+                            save_to_excel(df, DATA_FILE)
+                            st.success(f"Updated {emp_row['Full Name']} successfully! Refresh to see changes.")
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Error saving: {e}")
+
+    elif edit_action == "Delete Record":
+        st.markdown("### Delete Employee Record")
+        search_del = st.text_input("Search employee by name", key="del_search")
+
+        if search_del:
+            matches = df[df['Full Name'].str.contains(search_del, case=False, na=False)]
+            if len(matches) == 0:
+                st.warning("No employees found.")
+            else:
+                match_labels = [
+                    f"{row['Full Name']} — {row.get('Department', 'N/A')} (#{idx})"
+                    for idx, row in matches.iterrows()
+                ]
+                selected_del_label = st.selectbox("Select employee to delete", match_labels,
+                                                  key="del_select")
+                del_idx = int(selected_del_label.split('(#')[-1].rstrip(')'))
+                emp_info = df.loc[del_idx]
+                st.write(f"**Name:** {emp_info['Full Name']}")
+                st.write(f"**Department:** {emp_info['Department']}")
+                st.write(f"**Status:** {emp_info['Employee Status']}")
+
+                confirm = st.checkbox("I confirm I want to delete this record", key="del_confirm")
+
+                if st.button("Delete Record", type="primary", disabled=not confirm):
+                    updated_df = df.drop(index=del_idx)
+                    try:
+                        save_to_excel(updated_df, DATA_FILE)
+                        st.success(f"Deleted {emp_info['Full Name']}. Refresh to see changes.")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Error saving: {e}")
 
 
 # ===================== FOOTER =====================
