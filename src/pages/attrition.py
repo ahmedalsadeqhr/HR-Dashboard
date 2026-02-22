@@ -5,6 +5,18 @@ import plotly.express as px
 from src.data_processing import get_manager_attrition
 
 
+def _style(fig, height=400):
+    fig.update_layout(
+        height=height,
+        font=dict(family='Inter, Segoe UI, sans-serif'),
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        margin=dict(t=40, b=40, l=40, r=20),
+        legend=dict(bgcolor='rgba(0,0,0,0)'),
+    )
+    return fig
+
+
 def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG):
     departed_df = filtered_df[filtered_df['Employee Status'] == 'Departed']
 
@@ -20,8 +32,8 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
         exit_counts.columns = ['Exit Type', 'Count']
         fig = px.pie(exit_counts, values='Count', names='Exit Type',
                      color_discrete_sequence=[COLORS['warning'], COLORS['danger'], COLORS['brown']])
-        fig.update_traces(textinfo='percent+value')
-        st.plotly_chart(fig, use_container_width=True, config=CHART_CONFIG)
+        fig.update_traces(textinfo='percent+value', textfont_size=13)
+        st.plotly_chart(_style(fig, 380), use_container_width=True, config=CHART_CONFIG)
 
     with col2:
         st.subheader("Exit Reason Categories")
@@ -29,8 +41,8 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
         reason_counts.columns = ['Category', 'Count']
         fig = px.bar(reason_counts, x='Count', y='Category', orientation='h',
                      color='Count', color_continuous_scale='Reds')
-        fig.update_layout(height=400, yaxis={'categoryorder': 'total ascending'})
-        st.plotly_chart(fig, use_container_width=True, config=CHART_CONFIG)
+        fig.update_layout(yaxis={'categoryorder': 'total ascending'})
+        st.plotly_chart(_style(fig, 400), use_container_width=True, config=CHART_CONFIG)
 
     st.markdown("---")
 
@@ -51,8 +63,8 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
     })
     fig = px.pie(vol_data, values='Count', names='Type',
                  color_discrete_sequence=[COLORS['warning'], COLORS['danger']], hole=0.4)
-    fig.update_traces(textinfo='percent+value')
-    st.plotly_chart(fig, use_container_width=True, config=CHART_CONFIG)
+    fig.update_traces(textinfo='percent+value', textfont_size=13)
+    st.plotly_chart(_style(fig, 380), use_container_width=True, config=CHART_CONFIG)
 
     st.markdown("---")
 
@@ -70,8 +82,8 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
                  color='Attrition Rate %', color_continuous_scale='RdYlGn_r',
                  text='Attrition Rate %')
     fig.update_traces(texttemplate='%{text:.1f}%', textposition='outside')
-    fig.update_layout(xaxis_tickangle=-45, height=450)
-    st.plotly_chart(fig, use_container_width=True, config=CHART_CONFIG)
+    fig.update_layout(xaxis_tickangle=-45)
+    st.plotly_chart(_style(fig, 450), use_container_width=True, config=CHART_CONFIG)
 
     st.dataframe(dept_attrition, use_container_width=True, hide_index=True)
 
@@ -85,9 +97,8 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
         if len(reason_list) > 0:
             fig = px.bar(reason_list, x='Count', y='Reason', orientation='h',
                          color='Count', color_continuous_scale='Oranges')
-            fig.update_layout(height=max(300, len(reason_list) * 30),
-                              yaxis={'categoryorder': 'total ascending'})
-            st.plotly_chart(fig, use_container_width=True, config=CHART_CONFIG)
+            fig.update_layout(yaxis={'categoryorder': 'total ascending'})
+            st.plotly_chart(_style(fig, max(300, len(reason_list) * 30)), use_container_width=True, config=CHART_CONFIG)
 
     st.markdown("---")
 
@@ -103,8 +114,8 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
         if 'Top Exit Reason' in manager_data.columns:
             mgr_chart_kwargs['hover_data'] = ['Top Exit Reason']
         fig = px.bar(manager_data.head(15), **mgr_chart_kwargs)
-        fig.update_layout(height=500, yaxis={'categoryorder': 'total ascending'})
-        st.plotly_chart(fig, use_container_width=True, config=CHART_CONFIG)
+        fig.update_layout(yaxis={'categoryorder': 'total ascending'})
+        st.plotly_chart(_style(fig, 500), use_container_width=True, config=CHART_CONFIG)
         st.dataframe(manager_data, use_container_width=True, hide_index=True)
     else:
         st.info("No manager attrition data available.")

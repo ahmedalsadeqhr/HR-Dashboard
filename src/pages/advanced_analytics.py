@@ -4,6 +4,18 @@ import plotly.express as px
 from datetime import datetime
 
 
+def _style(fig, height=400):
+    fig.update_layout(
+        height=height,
+        font=dict(family='Inter, Segoe UI, sans-serif'),
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        margin=dict(t=40, b=40, l=40, r=20),
+        legend=dict(bgcolor='rgba(0,0,0,0)'),
+    )
+    return fig
+
+
 def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG):
     adv_departed = filtered_df[filtered_df['Employee Status'] == 'Departed']
 
@@ -39,8 +51,8 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
                          color='Retention %', color_continuous_scale='RdYlGn',
                          text='Retention %')
             fig.update_traces(texttemplate='%{text:.1f}%', textposition='outside')
-            fig.update_layout(xaxis_tickangle=-45, height=400)
-            st.plotly_chart(fig, use_container_width=True, config=CHART_CONFIG)
+            fig.update_layout(xaxis_tickangle=-45)
+            st.plotly_chart(_style(fig, 400), use_container_width=True, config=CHART_CONFIG)
         else:
             st.info("Not enough data to measure 90-day retention.")
     else:
@@ -83,7 +95,7 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
                          text='Turnover Rate %')
 
         fig.update_traces(texttemplate='%{text:.1f}%', textposition='outside')
-        fig.update_layout(xaxis_tickangle=-45, height=400)
-        st.plotly_chart(fig, use_container_width=True, config=CHART_CONFIG)
+        fig.update_layout(xaxis_tickangle=-45)
+        st.plotly_chart(_style(fig, 400), use_container_width=True, config=CHART_CONFIG)
     else:
         st.info("No departure data available for turnover analysis.")

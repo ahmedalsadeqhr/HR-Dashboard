@@ -1,13 +1,16 @@
 COLORS = {
-    'primary': '#1f77b4',
-    'success': '#2ca02c',
-    'danger': '#d62728',
-    'warning': '#ff7f0e',
-    'info': '#17becf',
-    'purple': '#9467bd',
-    'pink': '#e377c2',
-    'brown': '#8c564b',
-    'gray': '#7f7f7f',
+    'primary': '#0057B8',
+    'secondary': '#FFD100',
+    'success': '#28A745',
+    'danger': '#DC3545',
+    'warning': '#FFC107',
+    'info': '#17A2B8',
+    'purple': '#6F42C1',
+    'pink': '#E83E8C',
+    'brown': '#8C564B',
+    'gray': '#6C757D',
+    'light': '#F8F9FA',
+    'dark': '#343A40',
 }
 
 COLOR_SEQUENCE = [
@@ -15,6 +18,20 @@ COLOR_SEQUENCE = [
     COLORS['warning'], COLORS['info'], COLORS['purple'],
     COLORS['pink'], COLORS['brown'],
 ]
+
+# 51Talk brand-themed Plotly chart template
+CHART_TEMPLATE = {
+    'layout': {
+        'font': {'family': 'Inter, Segoe UI, sans-serif', 'color': '#343A40'},
+        'paper_bgcolor': 'rgba(0,0,0,0)',
+        'plot_bgcolor': 'rgba(0,0,0,0)',
+        'title': {'font': {'size': 16, 'color': '#0057B8'}},
+        'colorway': [
+            '#0057B8', '#28A745', '#DC3545', '#FFC107',
+            '#17A2B8', '#6F42C1', '#E83E8C', '#8C564B',
+        ],
+    }
+}
 
 DATA_FILE = "Master.xlsx"
 

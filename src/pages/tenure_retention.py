@@ -2,6 +2,18 @@ import streamlit as st
 import plotly.express as px
 
 
+def _style(fig, height=400):
+    fig.update_layout(
+        height=height,
+        font=dict(family='Inter, Segoe UI, sans-serif'),
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        margin=dict(t=40, b=40, l=40, r=20),
+        legend=dict(bgcolor='rgba(0,0,0,0)'),
+    )
+    return fig
+
+
 def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG):
     st.subheader("Tenure Distribution")
 
@@ -14,8 +26,7 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
                        color='Employee Status',
                        color_discrete_map={'Active': COLORS['success'], 'Departed': COLORS['danger']},
                        marginal='box')
-    fig.update_layout(height=400)
-    st.plotly_chart(fig, use_container_width=True, config=CHART_CONFIG)
+    st.plotly_chart(_style(fig, 400), use_container_width=True, config=CHART_CONFIG)
 
     st.markdown("---")
 
@@ -28,8 +39,8 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
                  color='Avg Tenure', color_continuous_scale='Blues',
                  text='Avg Tenure', hover_data=['Median Tenure', 'Count'])
     fig.update_traces(texttemplate='%{text:.1f}', textposition='outside')
-    fig.update_layout(xaxis_tickangle=-45, height=450)
-    st.plotly_chart(fig, use_container_width=True, config=CHART_CONFIG)
+    fig.update_layout(xaxis_tickangle=-45)
+    st.plotly_chart(_style(fig, 450), use_container_width=True, config=CHART_CONFIG)
 
     st.markdown("---")
 
@@ -48,7 +59,7 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
         early_reasons.columns = ['Reason', 'Count']
         fig = px.bar(early_reasons, x='Count', y='Reason', orientation='h',
                      color='Count', color_continuous_scale='Reds')
-        fig.update_layout(height=300, yaxis={'categoryorder': 'total ascending'})
-        st.plotly_chart(fig, use_container_width=True, config=CHART_CONFIG)
+        fig.update_layout(yaxis={'categoryorder': 'total ascending'})
+        st.plotly_chart(_style(fig, 300), use_container_width=True, config=CHART_CONFIG)
     else:
         st.info("No early leavers in current selection.")

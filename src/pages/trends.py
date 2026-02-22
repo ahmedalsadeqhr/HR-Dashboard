@@ -3,6 +3,18 @@ import pandas as pd
 import plotly.express as px
 
 
+def _style(fig, height=400):
+    fig.update_layout(
+        height=height,
+        font=dict(family='Inter, Segoe UI, sans-serif'),
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        margin=dict(t=40, b=40, l=40, r=20),
+        legend=dict(bgcolor='rgba(0,0,0,0)'),
+    )
+    return fig
+
+
 def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG):
     trends_dep_df = filtered_df[filtered_df['Employee Status'] == 'Departed']
 
@@ -15,8 +27,8 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
             fig = px.line(hiring, x='Join Month', y='Hires', markers=True,
                           color_discrete_sequence=[COLORS['success']])
             fig.update_traces(line_width=3)
-            fig.update_layout(xaxis_tickangle=-45, height=350)
-            st.plotly_chart(fig, use_container_width=True, config=CHART_CONFIG)
+            fig.update_layout(xaxis_tickangle=-45)
+            st.plotly_chart(_style(fig, 350), use_container_width=True, config=CHART_CONFIG)
 
     with col2:
         st.subheader("Attrition Trend by Month")
@@ -25,8 +37,8 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
             fig = px.line(attrition, x='Exit Month', y='Exits', markers=True,
                           color_discrete_sequence=[COLORS['danger']])
             fig.update_traces(line_width=3)
-            fig.update_layout(xaxis_tickangle=-45, height=350)
-            st.plotly_chart(fig, use_container_width=True, config=CHART_CONFIG)
+            fig.update_layout(xaxis_tickangle=-45)
+            st.plotly_chart(_style(fig, 350), use_container_width=True, config=CHART_CONFIG)
         else:
             st.info("No departed employees in current selection.")
 
@@ -41,8 +53,7 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
                      x='Join Year', y='Count', color='Status',
                      color_discrete_map={'Active': COLORS['success'], 'Departed': COLORS['danger']},
                      barmode='stack')
-        fig.update_layout(height=400)
-        st.plotly_chart(fig, use_container_width=True, config=CHART_CONFIG)
+        st.plotly_chart(_style(fig, 400), use_container_width=True, config=CHART_CONFIG)
         st.dataframe(headcount, use_container_width=True)
 
     st.markdown("---")
@@ -66,5 +77,4 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
                           color_discrete_sequence=[COLORS['purple']])
             fig.add_hline(y=1, line_dash="dash", line_color="gray",
                           annotation_text="Breakeven (1:1)")
-            fig.update_layout(height=350)
-            st.plotly_chart(fig, use_container_width=True, config=CHART_CONFIG)
+            st.plotly_chart(_style(fig, 350), use_container_width=True, config=CHART_CONFIG)

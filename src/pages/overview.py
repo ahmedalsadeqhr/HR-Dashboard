@@ -2,6 +2,19 @@ import streamlit as st
 import plotly.express as px
 
 
+def _style(fig, height=400):
+    """Apply consistent chart styling."""
+    fig.update_layout(
+        height=height,
+        font=dict(family='Inter, Segoe UI, sans-serif'),
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        margin=dict(t=40, b=40, l=40, r=20),
+        legend=dict(bgcolor='rgba(0,0,0,0)'),
+    )
+    return fig
+
+
 def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG):
     col1, col2 = st.columns(2)
 
@@ -12,8 +25,8 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
         fig = px.pie(gender_counts, values='Count', names='Gender',
                      color_discrete_sequence=[COLORS['primary'], COLORS['pink']],
                      hole=0.4)
-        fig.update_traces(textinfo='percent+value')
-        st.plotly_chart(fig, use_container_width=True, config=CHART_CONFIG)
+        fig.update_traces(textinfo='percent+value', textfont_size=13)
+        st.plotly_chart(_style(fig, 380), use_container_width=True, config=CHART_CONFIG)
 
     with col2:
         st.subheader("Employee Status")
@@ -22,8 +35,8 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
         fig = px.pie(status_counts, values='Count', names='Status',
                      color_discrete_sequence=[COLORS['success'], COLORS['danger']],
                      hole=0.4)
-        fig.update_traces(textinfo='percent+value')
-        st.plotly_chart(fig, use_container_width=True, config=CHART_CONFIG)
+        fig.update_traces(textinfo='percent+value', textfont_size=13)
+        st.plotly_chart(_style(fig, 380), use_container_width=True, config=CHART_CONFIG)
 
     st.markdown("---")
 
@@ -32,8 +45,8 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
     fig = px.bar(dept_data, x='Department', y='Count', color='Employee Status',
                  color_discrete_map={'Active': COLORS['success'], 'Departed': COLORS['danger']},
                  barmode='group')
-    fig.update_layout(xaxis_tickangle=-45, height=450)
-    st.plotly_chart(fig, use_container_width=True, config=CHART_CONFIG)
+    fig.update_layout(xaxis_tickangle=-45)
+    st.plotly_chart(_style(fig, 450), use_container_width=True, config=CHART_CONFIG)
 
     st.markdown("---")
 
@@ -43,5 +56,4 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
         fig = px.histogram(age_df, x='Age', nbins=20,
                            color_discrete_sequence=[COLORS['primary']],
                            marginal='box')
-        fig.update_layout(height=500)
-        st.plotly_chart(fig, use_container_width=True, config=CHART_CONFIG)
+        st.plotly_chart(_style(fig, 450), use_container_width=True, config=CHART_CONFIG)

@@ -2,6 +2,18 @@ import streamlit as st
 import plotly.express as px
 
 
+def _style(fig, height=400):
+    fig.update_layout(
+        height=height,
+        font=dict(family='Inter, Segoe UI, sans-serif'),
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        margin=dict(t=40, b=40, l=40, r=20),
+        legend=dict(bgcolor='rgba(0,0,0,0)'),
+    )
+    return fig
+
+
 def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG):
     # Vendor analysis
     if 'Vendor' in filtered_df.columns:
@@ -13,16 +25,15 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
         with col1:
             fig = px.pie(vendor_counts, values='Count', names='Vendor',
                          color_discrete_sequence=COLOR_SEQUENCE, hole=0.4)
-            fig.update_traces(textinfo='percent+value')
-            st.plotly_chart(fig, use_container_width=True, config=CHART_CONFIG)
+            fig.update_traces(textinfo='percent+value', textfont_size=13)
+            st.plotly_chart(_style(fig, 380), use_container_width=True, config=CHART_CONFIG)
 
         with col2:
             vendor_status = filtered_df.groupby(['Vendor', 'Employee Status']).size().reset_index(name='Count')
             fig = px.bar(vendor_status, x='Vendor', y='Count', color='Employee Status',
                          color_discrete_map={'Active': COLORS['success'], 'Departed': COLORS['danger']},
                          barmode='group')
-            fig.update_layout(height=400)
-            st.plotly_chart(fig, use_container_width=True, config=CHART_CONFIG)
+            st.plotly_chart(_style(fig, 400), use_container_width=True, config=CHART_CONFIG)
 
         # Vendor attrition rates
         vendor_attrition = filtered_df.groupby('Vendor').agg(
@@ -49,5 +60,5 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
             change_dept.columns = ['Department', 'Changes']
             fig = px.bar(change_dept, x='Department', y='Changes',
                          color='Changes', color_continuous_scale='Blues')
-            fig.update_layout(xaxis_tickangle=-45, height=350)
-            st.plotly_chart(fig, use_container_width=True, config=CHART_CONFIG)
+            fig.update_layout(xaxis_tickangle=-45)
+            st.plotly_chart(_style(fig, 350), use_container_width=True, config=CHART_CONFIG)
