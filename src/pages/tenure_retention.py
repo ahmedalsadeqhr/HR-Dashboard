@@ -1,19 +1,15 @@
 import streamlit as st
-import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
-
-from src.data_processing import get_cohort_retention
 
 
 def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG):
     st.subheader("Tenure Distribution")
 
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Min Tenure", f"{filtered_df['Tenure (Months)'].min():.1f} mo")
-    col2.metric("Max Tenure", f"{filtered_df['Tenure (Months)'].max():.1f} mo")
-    col3.metric("Avg Tenure", f"{filtered_df['Tenure (Months)'].mean():.1f} mo")
-    col4.metric("Median Tenure", f"{filtered_df['Tenure (Months)'].median():.1f} mo")
+    col1, col2, col3 = st.columns(3)
+    max_tenure_years = filtered_df['Tenure (Months)'].max() / 12
+    col1.metric("Max Tenure", f"{max_tenure_years:.1f} yr")
+    col2.metric("Avg Tenure", f"{filtered_df['Tenure (Months)'].mean():.1f} mo")
+    col3.metric("Median Tenure", f"{filtered_df['Tenure (Months)'].median():.1f} mo")
 
     fig = px.histogram(filtered_df, x='Tenure (Months)', nbins=30,
                        color='Employee Status',
@@ -35,30 +31,6 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
     fig.update_traces(texttemplate='%{text:.1f}', textposition='outside')
     fig.update_layout(xaxis_tickangle=-45, height=450)
     st.plotly_chart(fig, use_container_width=True, config=CHART_CONFIG)
-
-    st.markdown("---")
-
-    # Cohort retention
-    st.subheader("Cohort Retention Analysis")
-    cohort = get_cohort_retention(filtered_df)
-    if len(cohort) > 0:
-        fig = go.Figure()
-        fig.add_trace(go.Bar(x=cohort['Join Year'], y=cohort['Active'], name='Active',
-                             marker_color=COLORS['success']))
-        fig.add_trace(go.Bar(x=cohort['Join Year'], y=cohort['Departed'], name='Departed',
-                             marker_color=COLORS['danger']))
-        fig.add_trace(go.Scatter(x=cohort['Join Year'], y=cohort['Retention Rate %'],
-                                 name='Retention %', yaxis='y2',
-                                 line=dict(color=COLORS['primary'], width=3),
-                                 mode='lines+markers'))
-        fig.update_layout(
-            barmode='stack',
-            yaxis=dict(title='Employee Count'),
-            yaxis2=dict(title='Retention Rate %', overlaying='y', side='right', range=[0, 105]),
-            height=450, legend=dict(orientation='h', y=-0.15)
-        )
-        st.plotly_chart(fig, use_container_width=True, config=CHART_CONFIG)
-        st.dataframe(cohort, use_container_width=True, hide_index=True)
 
     st.markdown("---")
 
