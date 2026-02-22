@@ -5,11 +5,10 @@ import plotly.express as px
 def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG):
     st.subheader("Tenure Distribution")
 
-    col1, col2, col3 = st.columns(3)
+    col1, col2 = st.columns(2)
     max_tenure_years = filtered_df['Tenure (Months)'].max() / 12
     col1.metric("Max Tenure", f"{max_tenure_years:.1f} yr")
     col2.metric("Avg Tenure", f"{filtered_df['Tenure (Months)'].mean():.1f} mo")
-    col3.metric("Median Tenure", f"{filtered_df['Tenure (Months)'].median():.1f} mo")
 
     fig = px.histogram(filtered_df, x='Tenure (Months)', nbins=30,
                        color='Employee Status',
@@ -34,41 +33,10 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
 
     st.markdown("---")
 
-    # Probation analysis
-    st.subheader("Probation Analysis")
-    if 'Probation Completed' in filtered_df.columns:
-        prob_data = filtered_df[filtered_df['Probation Completed'] != 'No Data']
-        if len(prob_data) > 0:
-            prob_counts = prob_data['Probation Completed'].value_counts().reset_index()
-            prob_counts.columns = ['Status', 'Count']
-            fig = px.pie(prob_counts, values='Count', names='Status',
-                         color_discrete_sequence=COLOR_SEQUENCE, hole=0.4)
-            fig.update_traces(textinfo='percent+value')
-            st.plotly_chart(fig, use_container_width=True, config=CHART_CONFIG)
-
-            prob_dept = prob_data.groupby('Department')['Probation Completed'].apply(
-                lambda x: (x.isin(['Completed', 'Completed Before Exit']).sum() / len(x) * 100)
-            ).round(1).reset_index()
-            prob_dept.columns = ['Department', 'Pass Rate %']
-            prob_dept = prob_dept.sort_values('Pass Rate %', ascending=False)
-
-            fig = px.bar(prob_dept, x='Department', y='Pass Rate %',
-                         color='Pass Rate %', color_continuous_scale='RdYlGn',
-                         text='Pass Rate %')
-            fig.update_traces(texttemplate='%{text:.1f}%', textposition='outside')
-            fig.update_layout(xaxis_tickangle=-45, height=400)
-            st.plotly_chart(fig, use_container_width=True, config=CHART_CONFIG)
-        else:
-            st.info("No probation data available.")
-    else:
-        st.info("Probation data column not found.")
-
-    st.markdown("---")
-
     # Early leavers
-    st.subheader("Early Leavers (Left within 6 months)")
+    st.subheader("Early Leavers (Left within 3 months)")
     dep_df = filtered_df[filtered_df['Employee Status'] == 'Departed']
-    early_leavers = dep_df[dep_df['Tenure (Months)'] <= 6]
+    early_leavers = dep_df[dep_df['Tenure (Months)'] <= 3]
 
     if len(early_leavers) > 0 and len(dep_df) > 0:
         col1, col2, col3 = st.columns(3)
