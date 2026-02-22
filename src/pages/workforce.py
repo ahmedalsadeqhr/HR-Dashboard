@@ -3,28 +3,6 @@ import plotly.express as px
 
 
 def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG):
-    st.subheader("Employment Type Breakdown")
-
-    if 'Employment Type' in filtered_df.columns:
-        col1, col2 = st.columns(2)
-
-        with col1:
-            type_counts = filtered_df['Employment Type'].value_counts().reset_index()
-            type_counts.columns = ['Type', 'Count']
-            fig = px.pie(type_counts, values='Count', names='Type',
-                         color_discrete_sequence=COLOR_SEQUENCE, hole=0.4)
-            fig.update_traces(textinfo='percent+value')
-            st.plotly_chart(fig, use_container_width=True, config=CHART_CONFIG)
-
-        with col2:
-            type_dept = filtered_df.groupby(['Department', 'Employment Type']).size().reset_index(name='Count')
-            fig = px.bar(type_dept, x='Department', y='Count', color='Employment Type',
-                         color_discrete_sequence=COLOR_SEQUENCE, barmode='stack')
-            fig.update_layout(xaxis_tickangle=-45, height=400)
-            st.plotly_chart(fig, use_container_width=True, config=CHART_CONFIG)
-
-    st.markdown("---")
-
     # Vendor analysis
     if 'Vendor' in filtered_df.columns:
         st.subheader("Vendor / Source Analysis")
@@ -72,17 +50,4 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
             fig = px.bar(change_dept, x='Department', y='Changes',
                          color='Changes', color_continuous_scale='Blues')
             fig.update_layout(xaxis_tickangle=-45, height=350)
-            st.plotly_chart(fig, use_container_width=True, config=CHART_CONFIG)
-
-    st.markdown("---")
-
-    # Workforce composition over time
-    st.subheader("Workforce Composition Over Time")
-    if 'Join Year' in filtered_df.columns and 'Employment Type' in filtered_df.columns:
-        comp_time = filtered_df.groupby(['Join Year', 'Employment Type']).size().reset_index(name='Count')
-        comp_time = comp_time[comp_time['Join Year'] > 2000]
-        if len(comp_time) > 0:
-            fig = px.area(comp_time, x='Join Year', y='Count', color='Employment Type',
-                          color_discrete_sequence=COLOR_SEQUENCE)
-            fig.update_layout(height=400)
             st.plotly_chart(fig, use_container_width=True, config=CHART_CONFIG)
