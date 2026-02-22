@@ -56,7 +56,7 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
                         'Position': new_position,
                         'Employee Status': new_status,
                         'Join Date': pd.Timestamp(new_join_date),
-                        'Type': new_type,
+                        'Employment Type': new_type,
                     }
                     if new_exit_date:
                         new_row['Exit Date'] = pd.Timestamp(new_exit_date)

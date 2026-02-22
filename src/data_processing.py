@@ -225,9 +225,9 @@ def save_to_excel(df, file_path):
 
     # Reverse rename for saving
     reverse_map = {
-        'Join Date': 'Join Date\n(yyyy/mm/dd)',
-        'Exit Date': 'Exit Date\nyyyy/mm/dd',
-        'Position After Joining': 'Position\n(After Joining)',
+        'Join Date': 'Join Date (yyyy/mm/dd)',
+        'Exit Date': 'Exit Date yyyy/mm/dd',
+        'Position After Joining': 'Position (After Joining)',
     }
     save_df = save_df.rename(columns={k: v for k, v in reverse_map.items() if k in save_df.columns})
 
