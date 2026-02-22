@@ -52,14 +52,34 @@ def load_css():
     [data-testid="stSidebar"] {
         background: linear-gradient(180deg, #0057B8 0%, #003D80 100%);
     }
-    [data-testid="stSidebar"] * {
+    [data-testid="stSidebar"] h1,
+    [data-testid="stSidebar"] h2,
+    [data-testid="stSidebar"] h3,
+    [data-testid="stSidebar"] p,
+    [data-testid="stSidebar"] span,
+    [data-testid="stSidebar"] label,
+    [data-testid="stSidebar"] .stMarkdown,
+    [data-testid="stSidebar"] [data-testid="stCaption"],
+    [data-testid="stSidebar"] small {
         color: #FFFFFF !important;
     }
     [data-testid="stSidebar"] .stSelectbox label,
     [data-testid="stSidebar"] .stMultiSelect label,
-    [data-testid="stSidebar"] .stDateInput label {
+    [data-testid="stSidebar"] .stDateInput label,
+    [data-testid="stSidebar"] .stFileUploader label {
         color: #FFD100 !important;
         font-weight: 600;
+    }
+    /* Keep input widget text dark and readable */
+    [data-testid="stSidebar"] input,
+    [data-testid="stSidebar"] [data-baseweb="select"] *,
+    [data-testid="stSidebar"] [data-baseweb="input"] *,
+    [data-testid="stSidebar"] [data-baseweb="tag"] *,
+    [data-testid="stSidebar"] [data-baseweb="popover"] *,
+    [data-testid="stSidebar"] [role="listbox"] *,
+    [data-testid="stSidebar"] [role="option"] *,
+    [data-testid="stSidebar"] .uploadedFile * {
+        color: #343A40 !important;
     }
     [data-testid="stSidebar"] hr {
         border-color: rgba(255,209,0,0.3);
