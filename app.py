@@ -5,7 +5,7 @@ from datetime import datetime
 from src.config import COLORS, COLOR_SEQUENCE, CHART_CONFIG, REQUIRED_COLUMNS, detect_name_column
 from src.data_processing import load_excel, calculate_kpis
 from src.utils import delta
-from src.pages import overview, attrition, tenure_retention, workforce, trends, employee_data, advanced_analytics, edit_data
+from src.pages import overview, attrition, tenure_retention, workforce, trends, employee_data, advanced_analytics
 
 # ===================== PAGE CONFIG =====================
 st.set_page_config(page_title="HR Analytics Dashboard", page_icon="📊", layout="wide")
@@ -155,7 +155,6 @@ tab_names = [
     "📅 Trends",
     "📋 Employee Data",
     "🔬 Advanced Analytics",
-    "✏️ Edit Data",
 ]
 
 tabs = st.tabs(tab_names)
@@ -180,9 +179,6 @@ with tabs[5]:
 
 with tabs[6]:
     advanced_analytics.render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG)
-
-with tabs[7]:
-    edit_data.render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG)
 
 # ===================== FOOTER =====================
 st.markdown("---")
