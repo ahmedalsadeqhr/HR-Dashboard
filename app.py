@@ -5,7 +5,7 @@ from datetime import datetime
 from src.config import COLORS, COLOR_SEQUENCE, CHART_CONFIG, REQUIRED_COLUMNS, detect_name_column
 from src.data_processing import load_excel, calculate_kpis
 from src.utils import delta
-from src.pages import overview, attrition, tenure_retention, workforce, trends, employee_data, advanced_analytics
+from src.pages import analysis, employee_data
 
 # ===================== PAGE CONFIG =====================
 st.set_page_config(page_title="HR Analytics Dashboard", page_icon="📊", layout="wide")
@@ -147,38 +147,13 @@ if len(filtered_df) < len(df):
 st.markdown("---")
 
 # ===================== TABS =====================
-tab_names = [
-    "📈 Overview",
-    "🚪 Attrition Analysis",
-    "⏱️ Tenure & Retention",
-    "🏗️ Workforce Composition",
-    "📅 Trends",
-    "📋 Employee Data",
-    "🔬 Advanced Analytics",
-]
-
-tabs = st.tabs(tab_names)
+tabs = st.tabs(["📊 Analysis", "📋 Employee Data"])
 
 with tabs[0]:
-    overview.render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG)
+    analysis.render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG)
 
 with tabs[1]:
-    attrition.render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG)
-
-with tabs[2]:
-    tenure_retention.render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG)
-
-with tabs[3]:
-    workforce.render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG)
-
-with tabs[4]:
-    trends.render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG)
-
-with tabs[5]:
     employee_data.render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG)
-
-with tabs[6]:
-    advanced_analytics.render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG)
 
 # ===================== FOOTER =====================
 st.markdown("---")
