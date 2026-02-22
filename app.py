@@ -137,12 +137,9 @@ row1[4].metric("Retention Rate", f"{kpis['retention_rate']:.1f}%",
 row1[5].metric("Avg Tenure (Mo)", f"{kpis['avg_tenure']:.1f}",
                delta=delta(kpis['avg_tenure'], kpis_all['avg_tenure'], '', len(filtered_df), len(df)))
 
-row2 = st.columns(4)
+row2 = st.columns(2)
 row2[0].metric("Avg Age", f"{kpis['avg_age']:.0f}" if not pd.isna(kpis['avg_age']) else "N/A")
 row2[1].metric("Gender (M:F)", kpis['gender_ratio'])
-row2[2].metric("Nationalities", f"{kpis['nationality_count']}")
-row2[3].metric("Probation Pass", f"{kpis['probation_pass_rate']:.1f}%",
-               delta=delta(kpis['probation_pass_rate'], kpis_all['probation_pass_rate'], '%', len(filtered_df), len(df)))
 
 if len(filtered_df) < len(df):
     st.caption(f"Deltas shown are vs. full dataset ({len(df)} records)")
