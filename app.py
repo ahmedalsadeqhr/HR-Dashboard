@@ -50,49 +50,33 @@ def load_css():
 
     /* ---- Sidebar branding ---- */
     [data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #0057B8 0%, #003D80 100%);
+        background: #F4F6F8;
+        border-right: 1px solid #E2E6EA;
     }
     [data-testid="stSidebar"] h1,
     [data-testid="stSidebar"] h2,
-    [data-testid="stSidebar"] h3,
-    [data-testid="stSidebar"] p,
-    [data-testid="stSidebar"] span,
-    [data-testid="stSidebar"] label,
-    [data-testid="stSidebar"] .stMarkdown,
-    [data-testid="stSidebar"] [data-testid="stCaption"],
-    [data-testid="stSidebar"] small {
-        color: #FFFFFF !important;
+    [data-testid="stSidebar"] h3 {
+        color: #0057B8 !important;
     }
     [data-testid="stSidebar"] .stSelectbox label,
     [data-testid="stSidebar"] .stMultiSelect label,
     [data-testid="stSidebar"] .stDateInput label,
     [data-testid="stSidebar"] .stFileUploader label {
-        color: #FFD100 !important;
+        color: #495057 !important;
         font-weight: 600;
     }
-    /* Keep input widget text dark and readable */
-    [data-testid="stSidebar"] input,
-    [data-testid="stSidebar"] [data-baseweb="select"] *,
-    [data-testid="stSidebar"] [data-baseweb="input"] *,
-    [data-testid="stSidebar"] [data-baseweb="tag"] *,
-    [data-testid="stSidebar"] [data-baseweb="popover"] *,
-    [data-testid="stSidebar"] [role="listbox"] *,
-    [data-testid="stSidebar"] [role="option"] *,
-    [data-testid="stSidebar"] .uploadedFile * {
-        color: #343A40 !important;
-    }
     [data-testid="stSidebar"] hr {
-        border-color: rgba(255,209,0,0.3);
+        border-color: #DEE2E6;
     }
     [data-testid="stSidebar"] .stButton > button {
-        background-color: #FFD100;
-        color: #0057B8 !important;
+        background-color: #0057B8;
+        color: #FFFFFF !important;
         font-weight: 600;
         border: none;
         border-radius: 6px;
     }
     [data-testid="stSidebar"] .stButton > button:hover {
-        background-color: #E6BC00;
+        background-color: #003D80;
     }
 
     /* ---- KPI Cards ---- */
