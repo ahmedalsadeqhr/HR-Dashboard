@@ -99,6 +99,7 @@ def load_css():
     [data-testid="stMetric"] {
         background: #FFFFFF;
         border: 1px solid #E9ECEF;
+        border-left: 4px solid #0057B8;
         border-radius: 10px;
         padding: 14px 18px;
         box-shadow: 0 1px 4px rgba(0,0,0,0.06);
@@ -118,20 +119,27 @@ def load_css():
     [data-testid="stMetric"] [data-testid="stMetricValue"] {
         color: #0057B8 !important;
         font-weight: 700;
-        font-size: 1.6rem;
+        font-size: 1.5rem;
     }
 
     /* ---- Tabs ---- */
     .stTabs [data-baseweb="tab-list"] {
         gap: 0;
         border-bottom: 2px solid #E9ECEF;
+        background: #FFFFFF;
+        border-radius: 8px 8px 0 0;
+        padding: 0 8px;
     }
     .stTabs [data-baseweb="tab"] {
         font-weight: 600;
         font-size: 0.95rem;
-        padding: 10px 28px;
+        padding: 12px 32px;
         color: #6C757D;
         border-bottom: 3px solid transparent;
+        transition: color 0.15s;
+    }
+    .stTabs [data-baseweb="tab"]:hover {
+        color: #0057B8;
     }
     .stTabs [aria-selected="true"] {
         color: #0057B8 !important;
@@ -150,14 +158,108 @@ def load_css():
     /* ---- Dividers ---- */
     hr {
         border: none;
-        border-top: 1px solid #E9ECEF;
-        margin: 1.5rem 0;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, #CFD8DC, #FFD100, #CFD8DC, transparent);
+        margin: 2rem 0;
     }
 
     /* ---- DataFrames ---- */
     .stDataFrame {
         border-radius: 8px;
         overflow: hidden;
+        border: 1px solid #E9ECEF;
+    }
+
+    /* ---- Main content buttons ---- */
+    .stDownloadButton > button,
+    .stFormSubmitButton > button {
+        background-color: #0057B8;
+        color: #FFFFFF !important;
+        border: none;
+        border-radius: 6px;
+        font-weight: 600;
+        padding: 8px 20px;
+        transition: background-color 0.15s, transform 0.1s;
+    }
+    .stDownloadButton > button:hover,
+    .stFormSubmitButton > button:hover {
+        background-color: #003D80;
+        transform: translateY(-1px);
+    }
+    .stDownloadButton > button:active,
+    .stFormSubmitButton > button:active {
+        transform: translateY(0);
+    }
+
+    /* ---- Radio buttons (mode selector) ---- */
+    .stRadio > div {
+        gap: 0 !important;
+    }
+    .stRadio [role="radiogroup"] {
+        gap: 0;
+    }
+    .stRadio [role="radiogroup"] label {
+        background: #FFFFFF;
+        border: 1px solid #DEE2E6;
+        padding: 8px 18px;
+        font-weight: 500;
+        font-size: 0.88rem;
+        transition: all 0.15s;
+        cursor: pointer;
+    }
+    .stRadio [role="radiogroup"] label:first-of-type {
+        border-radius: 6px 0 0 6px;
+    }
+    .stRadio [role="radiogroup"] label:last-of-type {
+        border-radius: 0 6px 6px 0;
+    }
+    .stRadio [role="radiogroup"] label[data-checked="true"] {
+        background: #0057B8;
+        color: #FFFFFF !important;
+        border-color: #0057B8;
+    }
+
+    /* ---- Alerts ---- */
+    .stAlert {
+        border-radius: 8px;
+        border-left: 4px solid;
+    }
+    [data-testid="stAlert"][data-baseweb*="notification"] {
+        border-radius: 8px;
+    }
+
+    /* ---- Forms ---- */
+    [data-testid="stForm"] {
+        background: #FFFFFF;
+        border: 1px solid #E9ECEF;
+        border-radius: 10px;
+        padding: 1.5rem;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    }
+
+    /* ---- Text inputs ---- */
+    .stTextInput > div > div > input {
+        border-radius: 6px;
+        border: 1px solid #DEE2E6;
+        transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .stTextInput > div > div > input:focus {
+        border-color: #0057B8;
+        box-shadow: 0 0 0 2px rgba(0,87,184,0.15);
+    }
+
+    /* ---- Plotly chart containers ---- */
+    [data-testid="stPlotlyChart"] {
+        background: #FFFFFF;
+        border-radius: 10px;
+        padding: 10px;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+        border: 1px solid #F0F0F0;
+        margin-bottom: 0.5rem;
+        transition: box-shadow 0.15s;
+    }
+    [data-testid="stPlotlyChart"]:hover {
+        box-shadow: 0 3px 10px rgba(0,87,184,0.08);
     }
 
     /* ---- Footer ---- */
@@ -171,13 +273,28 @@ def load_css():
     }
     .footer a { color: #0057B8; text-decoration: none; }
 
-    /* ---- Plotly chart containers ---- */
-    [data-testid="stPlotlyChart"] {
-        background: #FFFFFF;
-        border-radius: 10px;
-        padding: 8px;
-        box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    /* ---- Welcome screen ---- */
+    .welcome-container {
+        text-align: center;
+        padding: 4rem 2rem;
+    }
+    .welcome-container img {
+        height: 80px;
+        margin-bottom: 1.5rem;
+        border-radius: 12px;
+    }
+    .welcome-container h2 {
+        color: #0057B8 !important;
+        border: none !important;
+        font-size: 1.6rem;
         margin-bottom: 0.5rem;
+    }
+    .welcome-container p {
+        color: #6C757D;
+        font-size: 1rem;
+        max-width: 480px;
+        margin: 0 auto;
+        line-height: 1.6;
     }
 
     /* ---- Sidebar logo ---- */
@@ -188,6 +305,19 @@ def load_css():
     .sidebar-logo {
         height: 48px;
         border-radius: 8px;
+    }
+
+    /* ---- Filter record count badge ---- */
+    .filter-badge {
+        background: rgba(255,209,0,0.2);
+        border: 1px solid rgba(255,209,0,0.5);
+        border-radius: 20px;
+        padding: 4px 14px;
+        font-size: 0.82rem;
+        font-weight: 600;
+        color: #0057B8;
+        display: inline-block;
+        margin-bottom: 0.5rem;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -253,7 +383,16 @@ else:
     st.sidebar.info("Please upload the Master Sheet (.xlsx) to get started.")
 
 if df is None:
-    st.warning("No data loaded. Please upload the Master Sheet to get started.")
+    if logo_path.exists():
+        st.markdown(f"""
+        <div class="welcome-container">
+            <img src="data:image/png;base64,{logo_b64}" alt="51Talk">
+            <h2>Welcome to HR Analytics</h2>
+            <p>Upload your Master Sheet (.xlsx) using the sidebar to get started with workforce intelligence and people analytics.</p>
+        </div>
+        """, unsafe_allow_html=True)
+    else:
+        st.warning("No data loaded. Please upload the Master Sheet to get started.")
     st.stop()
 
 NAME_COL = detect_name_column(df)
@@ -332,24 +471,28 @@ kpis = calculate_kpis(filtered_df)
 kpis_all = calculate_kpis(df)
 
 st.subheader("Key Performance Indicators")
-row1 = st.columns(6)
+
+if len(filtered_df) < len(df):
+    st.markdown(
+        f'<div class="filter-badge">Showing {len(filtered_df):,} of {len(df):,} records &mdash; deltas vs. full dataset</div>',
+        unsafe_allow_html=True
+    )
+
+row1 = st.columns(4)
 row1[0].metric("Total Employees", f"{kpis['total']:,}")
 row1[1].metric("Active", f"{kpis['active']:,}")
 row1[2].metric("Departed", f"{kpis['departed']:,}")
 row1[3].metric("Attrition Rate", f"{kpis['attrition_rate']:.1f}%",
                delta=delta(kpis['attrition_rate'], kpis_all['attrition_rate'], '%', len(filtered_df), len(df)),
                delta_color="inverse")
-row1[4].metric("Retention Rate", f"{kpis['retention_rate']:.1f}%",
+
+row2 = st.columns(4)
+row2[0].metric("Retention Rate", f"{kpis['retention_rate']:.1f}%",
                delta=delta(kpis['retention_rate'], kpis_all['retention_rate'], '%', len(filtered_df), len(df)))
-row1[5].metric("Avg Tenure (Mo)", f"{kpis['avg_tenure']:.1f}",
+row2[1].metric("Avg Tenure (Mo)", f"{kpis['avg_tenure']:.1f}",
                delta=delta(kpis['avg_tenure'], kpis_all['avg_tenure'], '', len(filtered_df), len(df)))
-
-row2 = st.columns(6)
-row2[0].metric("Avg Age", f"{kpis['avg_age']:.0f}" if not pd.isna(kpis['avg_age']) else "N/A")
-row2[1].metric("Gender (M:F)", kpis['gender_ratio'])
-
-if len(filtered_df) < len(df):
-    st.caption(f"Deltas shown are vs. full dataset ({len(df)} records)")
+row2[2].metric("Avg Age", f"{kpis['avg_age']:.0f}" if not pd.isna(kpis['avg_age']) else "N/A")
+row2[3].metric("Gender (M:F)", kpis['gender_ratio'])
 
 st.markdown("---")
 
