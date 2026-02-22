@@ -36,17 +36,17 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
 
     # Voluntary vs Involuntary
     st.subheader("Voluntary vs Involuntary Turnover")
-    voluntary = len(departed_df[departed_df['Exit Type'] == 'Resigned'])
-    involuntary = len(departed_df[departed_df['Exit Type'].isin(['Terminated', 'Dropped'])])
+    voluntary = len(departed_df[departed_df['Exit Type'].isin(['Resigned', 'Dropped'])])
+    involuntary = len(departed_df[departed_df['Exit Type'] == 'Terminated'])
     total_departed = len(departed_df)
 
     col1, col2, col3 = st.columns(3)
-    col1.metric("Voluntary (Resigned)", f"{voluntary} ({voluntary / total_departed * 100:.1f}%)")
-    col2.metric("Involuntary (Term/Drop)", f"{involuntary} ({involuntary / total_departed * 100:.1f}%)")
+    col1.metric("Voluntary (Resigned/Dropped)", f"{voluntary} ({voluntary / total_departed * 100:.1f}%)")
+    col2.metric("Involuntary (Terminated)", f"{involuntary} ({involuntary / total_departed * 100:.1f}%)")
     col3.metric("Total Departures", f"{total_departed}")
 
     vol_data = pd.DataFrame({
-        'Type': ['Voluntary (Resigned)', 'Involuntary (Terminated/Dropped)'],
+        'Type': ['Voluntary (Resigned/Dropped)', 'Involuntary (Terminated)'],
         'Count': [voluntary, involuntary]
     })
     fig = px.pie(vol_data, values='Count', names='Type',
@@ -77,10 +77,10 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
 
     st.markdown("---")
 
-    # Exit Reason List
-    if 'Exit ReasonList' in departed_df.columns:
+    # Exit Reasons breakdown
+    if 'Exit Reason Category' in departed_df.columns:
         st.subheader("Exit Reasons (Categorized)")
-        reason_list = departed_df[departed_df['Exit ReasonList'].str.len() > 0]['Exit ReasonList'].value_counts().reset_index()
+        reason_list = departed_df[departed_df['Exit Reason Category'].notna()]['Exit Reason Category'].value_counts().reset_index()
         reason_list.columns = ['Reason', 'Count']
         if len(reason_list) > 0:
             fig = px.bar(reason_list, x='Count', y='Reason', orientation='h',

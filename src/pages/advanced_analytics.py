@@ -272,11 +272,11 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
     st.caption("Voluntary resignations of employees with 12+ months tenure are classified as likely regrettable losses.")
 
     if len(adv_departed) > 0:
-        voluntary = adv_departed[adv_departed['Exit Type'] == 'Resigned']
+        voluntary = adv_departed[adv_departed['Exit Type'].isin(['Resigned', 'Dropped'])]
         if len(voluntary) > 0 and 'Tenure (Months)' in voluntary.columns:
             regrettable = voluntary[voluntary['Tenure (Months)'] >= 12]
             non_regrettable_vol = voluntary[voluntary['Tenure (Months)'] < 12]
-            involuntary = adv_departed[adv_departed['Exit Type'] != 'Resigned']
+            involuntary = adv_departed[~adv_departed['Exit Type'].isin(['Resigned', 'Dropped'])]
 
             col1, col2, col3, col4 = st.columns(4)
             col1.metric("Total Departures", f"{len(adv_departed)}")
