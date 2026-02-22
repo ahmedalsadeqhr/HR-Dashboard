@@ -37,33 +37,11 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
 
     st.markdown("---")
 
-    col1, col2 = st.columns(2)
-
-    with col1:
-        st.subheader("Top 15 Positions")
-        pos_counts = filtered_df['Position'].value_counts().head(15).reset_index()
-        pos_counts.columns = ['Position', 'Count']
-        fig = px.bar(pos_counts, x='Count', y='Position', orientation='h',
-                     color='Count', color_continuous_scale='Blues')
-        fig.update_layout(height=500, yaxis={'categoryorder': 'total ascending'})
-        st.plotly_chart(fig, use_container_width=True, config=CHART_CONFIG)
-
-    with col2:
-        st.subheader("Age Distribution")
-        age_df = filtered_df[filtered_df['Age'] > 0]
-        if len(age_df) > 0:
-            fig = px.histogram(age_df, x='Age', nbins=20,
-                               color_discrete_sequence=[COLORS['primary']],
-                               marginal='box')
-            fig.update_layout(height=500)
-            st.plotly_chart(fig, use_container_width=True, config=CHART_CONFIG)
-
-    if 'Nationality' in filtered_df.columns:
-        st.markdown("---")
-        st.subheader("Nationality Distribution")
-        nat_counts = filtered_df['Nationality'].value_counts().reset_index()
-        nat_counts.columns = ['Nationality', 'Count']
-        fig = px.pie(nat_counts, values='Count', names='Nationality',
-                     color_discrete_sequence=COLOR_SEQUENCE)
-        fig.update_traces(textinfo='percent+value')
+    st.subheader("Age Distribution")
+    age_df = filtered_df[filtered_df['Age'] > 0]
+    if len(age_df) > 0:
+        fig = px.histogram(age_df, x='Age', nbins=20,
+                           color_discrete_sequence=[COLORS['primary']],
+                           marginal='box')
+        fig.update_layout(height=500)
         st.plotly_chart(fig, use_container_width=True, config=CHART_CONFIG)
