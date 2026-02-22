@@ -6,6 +6,17 @@ from src.config import DATA_FILE
 from src.data_processing import save_to_excel
 
 
+def _search_employees(df, query, NAME_COL):
+    """Search employees by Name, PS ID, CRM, or National ID."""
+    mask = pd.Series(False, index=df.index)
+    if NAME_COL and NAME_COL in df.columns:
+        mask |= df[NAME_COL].astype(str).str.contains(query, case=False, na=False)
+    for col in ['PS ID', 'CRM', 'Identity number']:
+        if col in df.columns:
+            mask |= df[col].astype(str).str.contains(query, case=False, na=False)
+    return df[mask]
+
+
 def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG):
     st.subheader("Edit Employee Data")
 
@@ -75,14 +86,11 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
 
     elif edit_action == "Edit Existing":
         st.markdown("### Edit Existing Employee")
-        if not NAME_COL:
-            st.warning("Name column not detected in the data.")
-            return
 
-        search_edit = st.text_input("Search employee by name", key="edit_search")
+        search_edit = st.text_input("Search by Name, PS ID, CRM, or National ID", key="edit_search")
 
         if search_edit:
-            matches = df[df[NAME_COL].str.contains(search_edit, case=False, na=False)]
+            matches = _search_employees(df, search_edit, NAME_COL)
             if len(matches) == 0:
                 st.warning("No employees found.")
             else:
@@ -136,14 +144,11 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
 
     elif edit_action == "Delete Record":
         st.markdown("### Delete Employee Record")
-        if not NAME_COL:
-            st.warning("Name column not detected in the data.")
-            return
 
-        search_del = st.text_input("Search employee by name", key="del_search")
+        search_del = st.text_input("Search by Name, PS ID, CRM, or National ID", key="del_search")
 
         if search_del:
-            matches = df[df[NAME_COL].str.contains(search_del, case=False, na=False)]
+            matches = _search_employees(df, search_del, NAME_COL)
             if len(matches) == 0:
                 st.warning("No employees found.")
             else:
