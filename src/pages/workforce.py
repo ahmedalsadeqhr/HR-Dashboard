@@ -30,7 +30,7 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
             Total=('Employee Status', 'count'),
             Departed=('Employee Status', lambda x: (x == 'Departed').sum())
         ).reset_index()
-        vendor_attrition['Attrition Rate %'] = (vendor_attrition['Departed'] / vendor_attrition['Total'] * 100).round(1)
+        vendor_attrition['Departure Rate %'] = (vendor_attrition['Departed'] / vendor_attrition['Total'] * 100).round(1)
         st.dataframe(vendor_attrition, use_container_width=True, hide_index=True)
 
     st.markdown("---")

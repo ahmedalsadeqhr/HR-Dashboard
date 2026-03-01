@@ -58,18 +58,18 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
     st.markdown("---")
 
     # Attrition by department
-    st.subheader("Attrition Rate by Department")
+    st.subheader("Departure Rate by Department")
     dept_attrition = filtered_df.groupby('Department').agg(
         Active=('Employee Status', lambda x: (x == 'Active').sum()),
         Departed=('Employee Status', lambda x: (x == 'Departed').sum()),
         Total=('Employee Status', 'count')
     ).reset_index()
-    dept_attrition['Attrition Rate %'] = (dept_attrition['Departed'] / dept_attrition['Total'] * 100).round(1)
-    dept_attrition = dept_attrition.sort_values('Attrition Rate %', ascending=False)
+    dept_attrition['Departure Rate %'] = (dept_attrition['Departed'] / dept_attrition['Total'] * 100).round(1)
+    dept_attrition = dept_attrition.sort_values('Departure Rate %', ascending=False)
 
-    fig = px.bar(dept_attrition, x='Department', y='Attrition Rate %',
-                 color='Attrition Rate %', color_continuous_scale='RdYlGn_r',
-                 text='Attrition Rate %')
+    fig = px.bar(dept_attrition, x='Department', y='Departure Rate %',
+                 color='Departure Rate %', color_continuous_scale='RdYlGn_r',
+                 text='Departure Rate %')
     fig.update_traces(texttemplate='%{text:.1f}%', textposition='outside')
     fig.update_layout(xaxis_tickangle=-45)
     st.plotly_chart(_style(fig, 450), use_container_width=True, config=CHART_CONFIG)

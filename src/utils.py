@@ -37,7 +37,7 @@ def generate_summary_report(filtered_df, df, kpis):
         f"Total Employees: {kpis['total']:,}",
         f"Active: {kpis['active']:,}",
         f"Departed: {kpis['departed']:,}",
-        f"Attrition Rate: {kpis['attrition_rate']:.1f}%",
+        f"Departure Rate: {kpis['attrition_rate']:.1f}%",
         f"Retention Rate: {kpis['retention_rate']:.1f}%",
         f"Avg Tenure: {kpis['avg_tenure']:.1f} months",
         f"Avg Age: {kpis['avg_age']:.0f}" if not pd.isna(kpis['avg_age']) else "Avg Age: N/A",

@@ -43,8 +43,7 @@ HC Analysis/
 ├── Master.xlsx             # Default HR data file
 ├── README.md               # This file
 ├── DOCUMENTATION.md        # Technical documentation
-├── DATA_DICTIONARY.md      # Data column specifications
-└── app_full_backup.py      # Backup of full Plotly version
+└── DATA_DICTIONARY.md      # Data column specifications
 ```
 
 ---

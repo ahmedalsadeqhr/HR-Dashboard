@@ -28,12 +28,15 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
             col2.metric("Left Within 90 Days", f"{len(left_within_90)}")
             col3.metric("Measurable Employees", f"{len(measurable)}")
 
-            dept_90 = measurable.groupby('Department').apply(
-                lambda g: pd.Series({
-                    'Total': len(g),
-                    'Left <90d': len(g[(g['Employee Status'] == 'Departed') & g['Exit Date'].notna() & ((g['Exit Date'] - g['Join Date']).dt.days <= 90)]),
-                })
-            ).reset_index()
+            left_90_mask = (
+                (measurable['Employee Status'] == 'Departed') &
+                measurable['Exit Date'].notna() &
+                ((measurable['Exit Date'] - measurable['Join Date']).dt.days <= 90)
+            )
+            dept_total = measurable.groupby('Department').size().rename('Total')
+            dept_left = measurable[left_90_mask].groupby('Department').size().rename('Left <90d')
+            dept_90 = pd.concat([dept_total, dept_left], axis=1).fillna(0).reset_index()
+            dept_90['Left <90d'] = dept_90['Left <90d'].astype(int)
             dept_90['Retention %'] = ((1 - dept_90['Left <90d'] / dept_90['Total']) * 100).round(1)
             dept_90 = dept_90.sort_values('Retention %')
 

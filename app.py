@@ -477,7 +477,7 @@ row1 = st.columns(4)
 row1[0].metric("Total Employees", f"{kpis['total']:,}")
 row1[1].metric("Active", f"{kpis['active']:,}")
 row1[2].metric("Departed", f"{kpis['departed']:,}")
-row1[3].metric("Attrition Rate", f"{kpis['attrition_rate']:.1f}%",
+row1[3].metric("Departure Rate", f"{kpis['attrition_rate']:.1f}%",
                delta=delta(kpis['attrition_rate'], kpis_all['attrition_rate'], '%', len(filtered_df), len(df)),
                delta_color="inverse")
 

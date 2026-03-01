@@ -154,12 +154,12 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
             if len(matches) == 0:
                 st.warning("No employees found.")
             else:
-                match_labels = [
-                    f"{row.get(NAME_COL, 'N/A') if NAME_COL else 'N/A'} -- {row.get('Department', 'N/A')} (#{idx})"
+                label_to_idx = {
+                    f"{row.get(NAME_COL, 'N/A') if NAME_COL else 'N/A'} -- {row.get('Department', 'N/A')} ({idx})": idx
                     for idx, row in matches.iterrows()
-                ]
-                selected_label = st.selectbox("Select employee", match_labels)
-                emp_idx = int(selected_label.split('(#')[-1].rstrip(')'))
+                }
+                selected_label = st.selectbox("Select employee", list(label_to_idx.keys()))
+                emp_idx = label_to_idx[selected_label]
                 emp_row = df.loc[emp_idx]
 
                 with st.form("edit_employee_form"):
@@ -215,13 +215,13 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
             if len(matches) == 0:
                 st.warning("No employees found.")
             else:
-                match_labels = [
-                    f"{row.get(NAME_COL, 'N/A') if NAME_COL else 'N/A'} -- {row.get('Department', 'N/A')} (#{idx})"
+                label_to_idx = {
+                    f"{row.get(NAME_COL, 'N/A') if NAME_COL else 'N/A'} -- {row.get('Department', 'N/A')} ({idx})": idx
                     for idx, row in matches.iterrows()
-                ]
-                selected_del_label = st.selectbox("Select employee to delete", match_labels,
+                }
+                selected_del_label = st.selectbox("Select employee to delete", list(label_to_idx.keys()),
                                                   key="del_select")
-                del_idx = int(selected_del_label.split('(#')[-1].rstrip(')'))
+                del_idx = label_to_idx[selected_del_label]
                 emp_info = df.loc[del_idx]
                 if NAME_COL:
                     st.write(f"**Name:** {emp_info[NAME_COL]}")
