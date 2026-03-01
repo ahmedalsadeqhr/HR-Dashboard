@@ -20,17 +20,37 @@ _config_path = Path(__file__).parent / "auth_config.yaml"
 if _config_path.exists():
     with open(_config_path) as _f:
         _auth_cfg = yaml.safe_load(_f)
-    # Allow overriding the cookie key via environment variable or st.secrets
+    # Cookie key can be overridden by st.secrets or env var
     _cookie_key = (
         st.secrets.get("cookie_key", None)
         if hasattr(st, "secrets")
         else os.environ.get("HR_COOKIE_KEY")
     ) or _auth_cfg["cookie"]["key"]
     _auth_cfg["cookie"]["key"] = _cookie_key
+elif hasattr(st, "secrets") and "credentials" in st.secrets:
+    # Streamlit Cloud: load credentials entirely from st.secrets
+    # Expected secrets structure:
+    #   [credentials.usernames.admin]
+    #   name = "Admin User"
+    #   password = "$2b$12$..."
+    #   role = "admin"
+    #   [cookie]
+    #   name = "hr_dashboard_cookie"
+    #   key = "your-long-random-secret"
+    #   expiry_days = 30
+    _auth_cfg = {
+        "credentials": st.secrets["credentials"].to_dict(),
+        "cookie": {
+            "name": st.secrets.get("cookie", {}).get("name", "hr_dashboard_cookie"),
+            "key": st.secrets["cookie"]["key"],
+            "expiry_days": int(st.secrets.get("cookie", {}).get("expiry_days", 30)),
+        },
+    }
 else:
     st.error(
-        "auth_config.yaml not found. "
-        "Copy auth_config.yaml.example to auth_config.yaml and fill in your credentials."
+        "No authentication configuration found. "
+        "On Streamlit Cloud: add credentials to the app Secrets (see auth_config.yaml.example). "
+        "Locally: copy auth_config.yaml.example → auth_config.yaml and fill in your credentials."
     )
     st.stop()
 
