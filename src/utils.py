@@ -3,6 +3,19 @@ import pandas as pd
 from datetime import datetime
 
 
+def _style(fig, height=400):
+    """Apply consistent chart styling."""
+    fig.update_layout(
+        height=height,
+        font=dict(family='Inter, Segoe UI, sans-serif'),
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        margin=dict(t=40, b=40, l=40, r=20),
+        legend=dict(bgcolor='rgba(0,0,0,0)'),
+    )
+    return fig
+
+
 def delta(filtered_val, all_val, suffix="", filtered_len=0, full_len=0):
     """Return delta string if filters are active, else None."""
     if filtered_len == full_len:

@@ -312,8 +312,15 @@ load_css()
 
 # ===================== LOGO HEADER =====================
 logo_path = Path(__file__).parent / "assets" / "logo.png"
+
+
+@st.cache_data
+def _encode_logo(path: Path) -> str:
+    return base64.b64encode(path.read_bytes()).decode()
+
+
 if logo_path.exists():
-    logo_b64 = base64.b64encode(logo_path.read_bytes()).decode()
+    logo_b64 = _encode_logo(logo_path)
     st.markdown(f"""
     <div class="header-container">
         <img src="data:image/png;base64,{logo_b64}" class="header-logo" alt="51Talk">
@@ -428,11 +435,14 @@ exit_type_filter = st.sidebar.selectbox(
 # Apply filters
 filtered_df = df.copy()
 
-if date_range is not None and isinstance(date_range, tuple) and len(date_range) == 2:
-    filtered_df = filtered_df[
-        (filtered_df['Join Date'].dt.date >= date_range[0]) &
-        (filtered_df['Join Date'].dt.date <= date_range[1])
-    ]
+if date_range is not None and isinstance(date_range, tuple):
+    if len(date_range) == 2:
+        filtered_df = filtered_df[
+            (filtered_df['Join Date'].dt.date >= date_range[0]) &
+            (filtered_df['Join Date'].dt.date <= date_range[1])
+        ]
+    else:
+        st.warning("Please select both a start and end date for the Join Date Range filter.")
 
 if dept_filter:
     filtered_df = filtered_df[filtered_df['Department'].isin(dept_filter)]

@@ -3,17 +3,7 @@ import pandas as pd
 import plotly.express as px
 from datetime import datetime
 
-
-def _style(fig, height=400):
-    fig.update_layout(
-        height=height,
-        font=dict(family='Inter, Segoe UI, sans-serif'),
-        paper_bgcolor='rgba(0,0,0,0)',
-        plot_bgcolor='rgba(0,0,0,0)',
-        margin=dict(t=40, b=40, l=40, r=20),
-        legend=dict(bgcolor='rgba(0,0,0,0)'),
-    )
-    return fig
+from src.utils import _style
 
 
 def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG):

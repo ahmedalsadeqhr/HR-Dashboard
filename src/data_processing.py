@@ -1,8 +1,10 @@
 import pandas as pd
 import numpy as np
+import streamlit as st
 from datetime import datetime
 
 
+@st.cache_data
 def load_excel(file_path_or_buffer):
     """Load Excel file from path or uploaded buffer."""
     df = pd.read_excel(file_path_or_buffer)
@@ -98,6 +100,7 @@ def process_data(df):
     return df
 
 
+@st.cache_data
 def calculate_kpis(df):
     """Calculate all KPI metrics from filtered dataframe."""
     total = len(df)
@@ -106,6 +109,8 @@ def calculate_kpis(df):
     attrition_rate = (departed / total * 100) if total > 0 else 0
     avg_tenure = df['Tenure (Months)'].mean() if 'Tenure (Months)' in df.columns else 0
     avg_age = df[df['Age'] > 0]['Age'].mean() if 'Age' in df.columns else 0
+    if pd.isna(avg_age):
+        avg_age = 0
 
     # Retention rate (active / total)
     retention_rate = (active / total * 100) if total > 0 else 0
