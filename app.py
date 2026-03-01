@@ -1,6 +1,9 @@
 import streamlit as st
 import pandas as pd
 import base64
+import os
+import yaml
+import streamlit_authenticator as stauth
 from datetime import datetime
 from pathlib import Path
 
@@ -11,6 +14,44 @@ from src.pages import analysis, employee_data
 
 # ===================== PAGE CONFIG =====================
 st.set_page_config(page_title="51Talk HR Analytics", page_icon="assets/logo.png", layout="wide")
+
+# ===================== AUTHENTICATION =====================
+_config_path = Path(__file__).parent / "auth_config.yaml"
+if _config_path.exists():
+    with open(_config_path) as _f:
+        _auth_cfg = yaml.safe_load(_f)
+    # Allow overriding the cookie key via environment variable or st.secrets
+    _cookie_key = (
+        st.secrets.get("cookie_key", None)
+        if hasattr(st, "secrets")
+        else os.environ.get("HR_COOKIE_KEY")
+    ) or _auth_cfg["cookie"]["key"]
+    _auth_cfg["cookie"]["key"] = _cookie_key
+else:
+    st.error(
+        "auth_config.yaml not found. "
+        "Copy auth_config.yaml.example to auth_config.yaml and fill in your credentials."
+    )
+    st.stop()
+
+authenticator = stauth.Authenticate(
+    _auth_cfg["credentials"],
+    _auth_cfg["cookie"]["name"],
+    _auth_cfg["cookie"]["key"],
+    _auth_cfg["cookie"]["expiry_days"],
+)
+
+authenticator.login(location="main")
+
+if st.session_state.get("authentication_status") is False:
+    st.error("Incorrect username or password.")
+    st.stop()
+elif st.session_state.get("authentication_status") is None:
+    st.warning("Please enter your username and password.")
+    st.stop()
+
+# Authenticated — show logout in sidebar
+authenticator.logout("Logout", location="sidebar")
 
 
 # ===================== CUSTOM CSS =====================

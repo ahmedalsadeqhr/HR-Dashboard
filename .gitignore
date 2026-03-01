@@ -7,3 +7,8 @@ __pycache__/
 htmlcov/
 .coverage
 nul
+
+# Sensitive config — use auth_config.yaml.example as template
+auth_config.yaml
+# Secrets for Streamlit Cloud
+.streamlit/secrets.toml

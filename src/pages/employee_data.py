@@ -2,8 +2,6 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 
-from src.config import DATA_FILE
-from src.data_processing import save_to_excel
 from src.utils import generate_summary_report, export_excel
 
 
@@ -136,12 +134,15 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
                         new_row['Exit Reason Category'] = new_exit_reason
 
                     updated_df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
-                    try:
-                        save_to_excel(updated_df, DATA_FILE)
-                        st.success(f"Added {new_name} successfully! Refresh the page to see changes.")
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"Error saving: {e}")
+                    st.session_state['hr_data'] = updated_df
+                    st.success(f"Added {new_name} successfully!")
+                    st.download_button(
+                        "Download updated data as Excel",
+                        data=export_excel(updated_df),
+                        file_name="Master_updated.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    )
+                    st.rerun()
 
     elif view_mode == "Edit Employee":
         st.subheader("Edit Existing Employee")
@@ -194,12 +195,15 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
                         if edit_exit_reason:
                             df.at[emp_idx, 'Exit Reason Category'] = edit_exit_reason
 
-                        try:
-                            save_to_excel(df, DATA_FILE)
-                            st.success(f"Updated {emp_row[NAME_COL]} successfully! Refresh to see changes.")
-                            st.rerun()
-                        except Exception as e:
-                            st.error(f"Error saving: {e}")
+                        st.session_state['hr_data'] = df
+                        st.success(f"Updated {emp_row.get(NAME_COL, 'employee') if NAME_COL else 'employee'} successfully!")
+                        st.download_button(
+                            "Download updated data as Excel",
+                            data=export_excel(df),
+                            file_name="Master_updated.xlsx",
+                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        )
+                        st.rerun()
 
     elif view_mode == "Delete Employee":
         st.subheader("Delete Employee Record")
@@ -227,10 +231,13 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
                 confirm = st.checkbox("I confirm I want to delete this record", key="del_confirm")
 
                 if st.button("Delete Record", type="primary", disabled=not confirm):
-                    updated_df = df.drop(index=del_idx)
-                    try:
-                        save_to_excel(updated_df, DATA_FILE)
-                        st.success(f"Deleted {emp_info.get(NAME_COL, 'record') if NAME_COL else 'record'}. Refresh to see changes.")
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"Error saving: {e}")
+                    updated_df = df.drop(index=del_idx).reset_index(drop=True)
+                    st.session_state['hr_data'] = updated_df
+                    st.success(f"Deleted {emp_info.get(NAME_COL, 'record') if NAME_COL else 'record'}.")
+                    st.download_button(
+                        "Download updated data as Excel",
+                        data=export_excel(updated_df),
+                        file_name="Master_updated.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    )
+                    st.rerun()

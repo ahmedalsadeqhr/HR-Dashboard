@@ -1,0 +1,25 @@
+# Copy this file to auth_config.yaml and fill in your own values.
+# NEVER commit auth_config.yaml — it is in .gitignore.
+# On Streamlit Cloud, set the cookie key via st.secrets instead (see app.py).
+
+credentials:
+  usernames:
+    admin:
+      name: Admin User
+      # Generate a bcrypt hash: python -c "import bcrypt; print(bcrypt.hashpw(b'yourpassword', bcrypt.gensalt()).decode())"
+      password: $2b$12$REPLACE_WITH_YOUR_BCRYPT_HASH
+      role: admin
+    editor:
+      name: HR Editor
+      password: $2b$12$REPLACE_WITH_YOUR_BCRYPT_HASH
+      role: editor
+    viewer:
+      name: HR Viewer
+      password: $2b$12$REPLACE_WITH_YOUR_BCRYPT_HASH
+      role: viewer
+
+cookie:
+  name: hr_dashboard_cookie
+  # Set this to a long random string. On Streamlit Cloud use st.secrets["cookie_key"].
+  key: REPLACE_WITH_A_LONG_RANDOM_SECRET
+  expiry_days: 30
