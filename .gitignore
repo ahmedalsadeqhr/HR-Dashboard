@@ -7,3 +7,4 @@ processed_uids.json
 .claude/
 Quiz/
 .worktrees/
+.streamlit/secrets.toml
