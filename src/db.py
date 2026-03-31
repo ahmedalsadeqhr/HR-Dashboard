@@ -35,8 +35,8 @@ def fetch_last_upload() -> dict | None:
 def replace_employees(df: pd.DataFrame) -> None:
     """Truncate employees table and insert all rows from df in batches."""
     client = get_supabase_client()
-    # Truncate: delete where id != 0 (deletes all rows)
-    client.table("employees").delete().neq("id", 0).execute()
+    # Truncate: delete where id >= 0 (deletes all rows)
+    client.table("employees").delete().gte("id", 0).execute()
     # Insert in batches
     records = df.where(pd.notnull(df), None).to_dict(orient="records")
     for i in range(0, len(records), _BATCH_SIZE):

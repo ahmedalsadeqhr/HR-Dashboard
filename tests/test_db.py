@@ -1,6 +1,8 @@
 import pytest
 from unittest.mock import patch, MagicMock
+import pandas as pd
 import src.supabase_client as sc
+from src.db import fetch_employees, log_upload, replace_employees
 
 
 @pytest.fixture(autouse=True)
@@ -40,10 +42,6 @@ def test_get_supabase_client_is_singleton():
             mock_create.assert_called_once()
 
 
-import pandas as pd
-from src.db import fetch_employees, log_upload, replace_employees
-
-
 def test_fetch_employees_returns_dataframe():
     """fetch_employees() returns a DataFrame."""
     mock_client = MagicMock()
@@ -55,6 +53,7 @@ def test_fetch_employees_returns_dataframe():
         assert isinstance(df, pd.DataFrame)
         assert "Gender" in df.columns
         assert "_uploaded_at" not in df.columns  # internal column stripped
+        assert "id" not in df.columns  # id column stripped
 
 
 def test_fetch_employees_returns_empty_dataframe_when_no_data():
@@ -83,7 +82,7 @@ def test_log_upload_inserts_row():
 def test_replace_employees_truncates_then_inserts():
     """replace_employees() deletes all rows then inserts new ones."""
     mock_client = MagicMock()
-    mock_client.table.return_value.delete.return_value.neq.return_value.execute.return_value = MagicMock()
+    mock_client.table.return_value.delete.return_value.gte.return_value.execute.return_value = MagicMock()
     mock_client.table.return_value.insert.return_value.execute.return_value = MagicMock()
 
     df = pd.DataFrame({"Gender": ["M", "F"], "Department": ["Tech", "HR"]})
