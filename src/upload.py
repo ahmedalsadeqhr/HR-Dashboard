@@ -1,7 +1,6 @@
 """Upload pipeline with column mapping and validation."""
 
 import pandas as pd
-from src.config import REQUIRED_COLUMNS
 
 
 def detect_schema_changes(df: pd.DataFrame, required: list[str]) -> dict[str, str | None]:
@@ -40,7 +39,7 @@ def validate_required_columns(df: pd.DataFrame, required: list[str]) -> list[str
 
 def prepare_upload(df: pd.DataFrame, mapping: dict[str, str | None]) -> pd.DataFrame:
     """Apply column mapping then return the processed dataframe ready for DB insert."""
-    df = apply_column_mapping(df, mapping)
+    df = apply_column_mapping(df, mapping).copy()
     # Convert all date columns to ISO string for JSON serialisation
     for col in df.select_dtypes(include=["datetime64[ns]", "datetime64[ns, UTC]"]).columns:
         df[col] = df[col].dt.strftime("%Y-%m-%d").where(df[col].notna(), None)
