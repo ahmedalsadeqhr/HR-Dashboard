@@ -92,3 +92,24 @@ def test_replace_employees_truncates_then_inserts():
         mock_client.table.return_value.delete.assert_called()
         # Insert was called
         mock_client.table.return_value.insert.assert_called()
+
+
+def test_load_from_db_returns_processed_dataframe():
+    """load_from_db() returns a processed DataFrame with derived columns."""
+    from src.data_processing import load_from_db
+
+    raw_data = pd.DataFrame({
+        "Gender": ["M", "F"],
+        "Department": ["Tech", "HR"],
+        "Employee Status": ["Active", "Departed"],
+        "Join Date": ["2022-01-15", "2021-06-01"],
+        "Exit Date": [None, "2023-03-01"],
+        "Position": ["Engineer", "Manager"],
+        "Exit Type": [None, "Resignation"],
+    })
+
+    with patch("src.data_processing.fetch_employees", return_value=raw_data):
+        df = load_from_db()
+        assert isinstance(df, pd.DataFrame)
+        assert "Tenure (Months)" in df.columns
+        assert "Join Year" in df.columns
