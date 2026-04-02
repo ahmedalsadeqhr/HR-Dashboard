@@ -3,8 +3,3 @@ __pycache__/
 *.pyc
 pending_requests.json
 processed_uids.json
-~$*
-.claude/
-Quiz/
-.worktrees/
-.streamlit/secrets.toml

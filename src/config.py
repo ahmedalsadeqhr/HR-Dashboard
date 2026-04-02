@@ -1,46 +1,9 @@
-COLORS = {
-    'primary': '#0057B8',
-    'secondary': '#FFD100',
-    'success': '#28A745',
-    'danger': '#DC3545',
-    'warning': '#FFC107',
-    'info': '#17A2B8',
-    'purple': '#6F42C1',
-    'pink': '#E83E8C',
-    'brown': '#8C564B',
-    'gray': '#6C757D',
-    'light': '#F8F9FA',
-    'dark': '#343A40',
-}
+"""Configuration constants for the HR Dashboard."""
 
-COLOR_SEQUENCE = [
-    COLORS['primary'], COLORS['success'], COLORS['danger'],
-    COLORS['warning'], COLORS['info'], COLORS['purple'],
-    COLORS['pink'], COLORS['brown'],
+REQUIRED_COLUMNS = [
+    "Gender",
+    "Department",
+    "Position",
+    "Employee Status",
+    "Exit Type",
 ]
-
-DATA_FILE = "Master.xlsx"
-
-REQUIRED_COLUMNS = ['Gender', 'Department', 'Position', 'Employee Status', 'Exit Type']
-
-CHART_CONFIG = {
-    'displayModeBar': True,
-    'toImageButtonOptions': {
-        'format': 'png',
-        'scale': 3,
-        'filename': 'hr_chart',
-    },
-    'modeBarButtonsToAdd': ['downloadCsv'],
-    'displaylogo': False,
-}
-
-
-def detect_name_column(df):
-    """Detect the name column from various naming conventions."""
-    for c in df.columns:
-        if 'full' in str(c).lower() and 'name' in str(c).lower():
-            return c
-    for c in df.columns:
-        if 'name' in str(c).lower() and c != 'Bank Name':
-            return c
-    return None

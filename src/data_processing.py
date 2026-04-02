@@ -2,12 +2,22 @@ import pandas as pd
 import numpy as np
 import streamlit as st
 from datetime import datetime
+from src.db import fetch_employees
 
 
 @st.cache_data
 def load_excel(file_path_or_buffer):
     """Load Excel file from path or uploaded buffer."""
     df = pd.read_excel(file_path_or_buffer)
+    return process_data(df)
+
+
+@st.cache_data(ttl=300)
+def load_from_db() -> pd.DataFrame:
+    """Load employee data from Supabase and process it. Cached for 5 minutes."""
+    df = fetch_employees()
+    if df.empty:
+        return df
     return process_data(df)
 
 
@@ -93,7 +103,7 @@ def process_data(df):
     if 'Nationality' in df.columns:
         df['Nationality'] = df['Nationality'].fillna('Unknown')
 
-    # Exit Reason List cleanup (the cleaner 17-category version)
+    # Exit Reason List cleanup
     if 'Exit ReasonList' in df.columns:
         df['Exit ReasonList'] = df['Exit ReasonList'].fillna('')
 
@@ -112,24 +122,19 @@ def calculate_kpis(df):
     if pd.isna(avg_age):
         avg_age = 0
 
-    # Retention rate (active / total)
     retention_rate = (active / total * 100) if total > 0 else 0
 
-    # Contractor ratio
     contractor_ratio = 0
     if 'Employment Type' in df.columns:
         freelancers = len(df[df['Employment Type'].str.contains('Freelancer|freelancer|Contract', case=False, na=False)])
         contractor_ratio = (freelancers / total * 100) if total > 0 else 0
 
-    # Diversity ratio (nationality)
     nationality_count = df['Nationality'].nunique() if 'Nationality' in df.columns else 0
 
-    # Gender ratio
     male_count = len(df[df['Gender'] == 'M']) if 'Gender' in df.columns else 0
     female_count = len(df[df['Gender'] == 'F']) if 'Gender' in df.columns else 0
     gender_ratio = f"{male_count}:{female_count}"
 
-    # Probation pass rate
     probation_pass_rate = 0
     if 'Probation Completed' in df.columns:
         prob_data = df[df['Probation Completed'] != 'No Data']
@@ -137,7 +142,6 @@ def calculate_kpis(df):
             completed = len(prob_data[prob_data['Probation Completed'].isin(['Completed', 'Completed Before Exit'])])
             probation_pass_rate = (completed / len(prob_data) * 100)
 
-    # Headcount growth YoY
     growth_rate = 0
     if 'Join Year' in df.columns:
         current_year = datetime.now().year
@@ -196,14 +200,11 @@ def get_manager_attrition(df):
     if len(mgr_df) == 0:
         return pd.DataFrame()
 
-    # Use whichever columns are available
     count_col = 'Full Name' if 'Full Name' in mgr_df.columns else mgr_df.columns[0]
     has_tenure = 'Tenure (Months)' in mgr_df.columns
     has_reason = 'Exit Reason Category' in mgr_df.columns
 
-    agg_dict = {
-        'Departures': (count_col, 'count'),
-    }
+    agg_dict = {'Departures': (count_col, 'count')}
     if has_tenure:
         agg_dict['Avg_Tenure'] = ('Tenure (Months)', 'mean')
     if has_reason:
@@ -211,7 +212,6 @@ def get_manager_attrition(df):
 
     manager_data = mgr_df.groupby(col).agg(**agg_dict).reset_index()
 
-    # Standardize column names
     rename = {col: 'Manager CRM', 'Departures': 'Departures'}
     if has_tenure:
         rename['Avg_Tenure'] = 'Avg Tenure (Months)'
@@ -228,7 +228,6 @@ def save_to_excel(df, file_path):
     """Save dataframe back to Excel, preserving original column names."""
     save_df = df.copy()
 
-    # Reverse rename for saving
     reverse_map = {
         'Join Date': 'Join Date (yyyy/mm/dd)',
         'Exit Date': 'Exit Date yyyy/mm/dd',
@@ -236,7 +235,6 @@ def save_to_excel(df, file_path):
     }
     save_df = save_df.rename(columns={k: v for k, v in reverse_map.items() if k in save_df.columns})
 
-    # Drop calculated columns
     calc_cols = ['Age', 'Tenure (Months)', 'Join Year', 'Join Month', 'Join Quarter',
                  'Exit Year', 'Exit Month', 'Probation Completed', 'Employment Type']
     save_df = save_df.drop(columns=[c for c in calc_cols if c in save_df.columns], errors='ignore')

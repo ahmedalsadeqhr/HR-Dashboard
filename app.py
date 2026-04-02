@@ -5,7 +5,8 @@ from datetime import datetime
 from pathlib import Path
 
 from src.config import COLORS, COLOR_SEQUENCE, CHART_CONFIG, REQUIRED_COLUMNS, detect_name_column
-from src.data_processing import load_excel, calculate_kpis
+from src.data_processing import load_from_db, calculate_kpis
+from src.db import fetch_last_upload
 from src.utils import delta
 from src.pages import analysis, employee_data
 
@@ -344,47 +345,19 @@ if logo_path.exists():
 # ===================== DATA LOADING =====================
 st.sidebar.header("Data Source")
 
-uploaded_file = st.sidebar.file_uploader(
-    "Upload Master Sheet", type=['xlsx', 'xls'],
-    help="Upload your HR data Excel file (Master Sheet)"
-)
+df = load_from_db()
 
-df = None
-
-if uploaded_file is not None:
-    try:
-        uploaded_file.seek(0)
-        df = load_excel(uploaded_file)
-        missing = [c for c in REQUIRED_COLUMNS if c not in df.columns]
-        if missing:
-            st.sidebar.error(f"Missing required columns: {', '.join(missing)}")
-            df = None
-        else:
-            st.sidebar.success(f"Loaded {len(df)} records from **{uploaded_file.name}**")
-            st.sidebar.caption(f"Uploaded at {datetime.now().strftime('%Y-%m-%d %H:%M')}")
-            st.session_state['hr_data'] = df
-            st.session_state['hr_file_name'] = uploaded_file.name
-            st.session_state['hr_upload_time'] = datetime.now().strftime('%Y-%m-%d %H:%M')
-    except Exception as e:
-        st.sidebar.error(f"Error loading file: {e}")
-elif 'hr_data' in st.session_state:
-    df = st.session_state['hr_data']
-    st.sidebar.success(f"Using **{st.session_state.get('hr_file_name', 'Master Sheet')}** ({len(df)} records)")
-    st.sidebar.caption(f"Uploaded at {st.session_state.get('hr_upload_time', 'N/A')}")
+# Show last updated badge in sidebar
+last = fetch_last_upload()
+if last:
+    st.sidebar.caption(
+        f"Last updated: {last['uploaded_at'][:10]} by {last['uploaded_by']} ({last['row_count']:,} rows)"
+    )
 else:
-    st.sidebar.info("Please upload the Master Sheet (.xlsx) to get started.")
+    st.sidebar.caption("No data uploaded yet. Go to the Upload page.")
 
-if df is None:
-    if logo_path.exists():
-        st.markdown(f"""
-        <div class="welcome-container">
-            <img src="data:image/png;base64,{logo_b64}" alt="51Talk">
-            <h2>Welcome to HR Analytics</h2>
-            <p>Upload your Master Sheet (.xlsx) using the sidebar to get started with workforce intelligence and people analytics.</p>
-        </div>
-        """, unsafe_allow_html=True)
-    else:
-        st.warning("No data loaded. Please upload the Master Sheet to get started.")
+if df.empty:
+    st.warning("No employee data found. Please upload a Master Sheet via the Upload page.")
     st.stop()
 
 NAME_COL = detect_name_column(df)
