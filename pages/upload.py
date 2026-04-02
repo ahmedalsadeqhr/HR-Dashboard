@@ -9,8 +9,11 @@ from src.data_processing import load_from_db
 st.set_page_config(page_title="Upload Master Sheet", page_icon="📤")
 
 # ── Auth ────────────────────────────────────────────────────────────────────
-credentials = {"usernames": dict(st.secrets["credentials"]["usernames"])}
-cookie_cfg = st.secrets["cookie"]
+# Deep-copy secrets into plain dicts — streamlit-authenticator modifies credentials
+# in-place (to hash passwords) which fails on Streamlit's read-only secrets object
+import json
+credentials = json.loads(json.dumps({"usernames": st.secrets["credentials"]["usernames"].to_dict()}))
+cookie_cfg = st.secrets["cookie"].to_dict()
 
 authenticator = stauth.Authenticate(
     credentials,
