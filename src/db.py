@@ -6,15 +6,13 @@ _BATCH_SIZE = 500  # Supabase insert limit per request
 
 
 def fetch_employees() -> pd.DataFrame:
-    """Fetch all rows from employees table, dropping internal columns."""
+    """Fetch all rows from employees table, unpacking the JSONB data column."""
     client = get_supabase_client()
-    result = client.table("employees").select("*").execute()
+    result = client.table("employees").select("data").execute()
     rows = result.data
     if not rows:
         return pd.DataFrame()
-    df = pd.DataFrame(rows)
-    cols_to_drop = [c for c in _INTERNAL_COLS if c in df.columns]
-    return df.drop(columns=cols_to_drop)
+    return pd.DataFrame([r["data"] for r in rows])
 
 
 def fetch_last_upload() -> dict | None:
@@ -33,14 +31,12 @@ def fetch_last_upload() -> dict | None:
 
 
 def replace_employees(df: pd.DataFrame) -> None:
-    """Truncate employees table and insert all rows from df in batches."""
+    """Truncate employees table and insert all rows as JSONB in batches."""
     client = get_supabase_client()
-    # Truncate: delete where id >= 0 (deletes all rows)
     client.table("employees").delete().gte("id", 0).execute()
-    # Insert in batches
     records = df.where(pd.notnull(df), None).to_dict(orient="records")
     for i in range(0, len(records), _BATCH_SIZE):
-        batch = records[i : i + _BATCH_SIZE]
+        batch = [{"data": row} for row in records[i: i + _BATCH_SIZE]]
         client.table("employees").insert(batch).execute()
 
 
