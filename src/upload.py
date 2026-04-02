@@ -39,8 +39,19 @@ def validate_required_columns(df: pd.DataFrame, required: list[str]) -> list[str
 
 def prepare_upload(df: pd.DataFrame, mapping: dict[str, str | None]) -> pd.DataFrame:
     """Apply column mapping then return the processed dataframe ready for DB insert."""
+    import datetime
     df = apply_column_mapping(df, mapping).copy()
-    # Convert all date columns to ISO string for JSON serialisation
-    for col in df.select_dtypes(include=["datetime64[ns]", "datetime64[ns, UTC]"]).columns:
-        df[col] = df[col].dt.strftime("%Y-%m-%d").where(df[col].notna(), None)
+    # Convert all datetime-like columns to ISO strings for JSON serialisation
+    for col in df.columns:
+        if pd.api.types.is_datetime64_any_dtype(df[col]):
+            df[col] = df[col].dt.strftime("%Y-%m-%d").where(df[col].notna(), None)
+        else:
+            # Handle object columns containing Python datetime/date objects
+            df[col] = df[col].apply(
+                lambda v: v.strftime("%Y-%m-%d")
+                if isinstance(v, (datetime.datetime, datetime.date))
+                else v
+            )
+    # Replace NaN/NaT with None for JSON compatibility
+    df = df.where(pd.notnull(df), None)
     return df
