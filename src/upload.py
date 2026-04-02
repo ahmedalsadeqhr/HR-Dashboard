@@ -9,7 +9,7 @@ def detect_schema_changes(df: pd.DataFrame, required: list[str]) -> dict[str, st
     Returns a mapping of {required_col: best_guess_from_file} for any that are missing.
     best_guess is the closest match found in df.columns (case-insensitive), or None.
     """
-    file_cols = list(df.columns)
+    file_cols = [str(c) for c in df.columns]
     file_cols_lower = {c.lower(): c for c in file_cols}
     changes = {}
     for req in required:
