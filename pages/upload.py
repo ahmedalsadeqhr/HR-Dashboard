@@ -22,7 +22,10 @@ authenticator = stauth.Authenticate(
     cookie_cfg["expiry_days"],
 )
 
-name, auth_status, username = authenticator.login("Upload Login", "main")
+authenticator.login(location="main")
+
+auth_status = st.session_state.get("authentication_status")
+username = st.session_state.get("username")
 
 if auth_status is False:
     st.error("Incorrect username or password.")
@@ -33,7 +36,7 @@ if auth_status is None:
 
 # ── Authenticated ────────────────────────────────────────────────────────────
 st.title("📤 Upload Master Sheet")
-authenticator.logout("Logout", "sidebar")
+authenticator.logout(location="sidebar")
 
 # Show current data stats
 last = fetch_last_upload()
