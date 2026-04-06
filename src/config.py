@@ -1,21 +1,28 @@
 COLORS = {
-    'primary':   '#0057B8',
-    'secondary': '#FFD100',
-    'success':   '#10B981',
-    'danger':    '#EF4444',
-    'warning':   '#F59E0B',
-    'info':      '#06B6D4',
-    'purple':    '#8B5CF6',
-    'pink':      '#E879F9',
-    'brown':     '#92400E',
-    'gray':      '#64748B',
-    'light':     '#F1F5F9',
-    'dark':      '#0F172A',
+    'primary':   '#7C3AED',   # purple
+    'secondary': '#06B6D4',   # cyan
+    'success':   '#10B981',   # emerald
+    'danger':    '#EF4444',   # red
+    'warning':   '#F59E0B',   # amber
+    'info':      '#3B82F6',   # blue
+    'purple':    '#A78BFA',   # purple-light
+    'pink':      '#D946EF',   # magenta
+    'brown':     '#F97316',   # orange
+    'gray':      '#475569',
+    'light':     '#1E1F35',
+    'dark':      '#0D0E1A',
 }
 
+# Neon palette for dark theme
 COLOR_SEQUENCE = [
-    '#0057B8', '#10B981', '#8B5CF6', '#F59E0B',
-    '#EF4444', '#06B6D4', '#E879F9', '#92400E',
+    '#06B6D4',  # cyan
+    '#7C3AED',  # purple
+    '#D946EF',  # magenta
+    '#10B981',  # emerald
+    '#F59E0B',  # amber
+    '#3B82F6',  # blue
+    '#EF4444',  # red
+    '#F97316',  # orange
 ]
 
 DATA_FILE = "Master.xlsx"

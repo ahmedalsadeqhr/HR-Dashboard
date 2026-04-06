@@ -20,11 +20,14 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
         exit_counts = departed_df['Exit Type'].value_counts().reset_index()
         exit_counts.columns = ['Exit Type', 'Count']
         fig = px.pie(exit_counts, values='Count', names='Exit Type',
-                     color_discrete_sequence=['#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4'],
-                     hole=0.55)
-        fig.update_traces(textinfo='percent+label', textfont_size=12,
-                          marker=dict(line=dict(color='#FFFFFF', width=2)))
-        fig.update_layout(showlegend=True, legend=dict(orientation='h', y=-0.1))
+                     color_discrete_sequence=['#F59E0B', '#EF4444', '#A78BFA', '#06B6D4'],
+                     hole=0.62)
+        fig.update_traces(
+            textinfo='percent+label', textfont_size=11, textfont_color='#E2E8F0',
+            marker=dict(line=dict(color='#0D0E1A', width=3)), pull=[0.04, 0, 0, 0],
+        )
+        fig.update_layout(showlegend=True, legend=dict(orientation='h', y=-0.12,
+                          font=dict(color='#94A3B8')))
         st.plotly_chart(_style(fig, 360), use_container_width=True, config=CHART_CONFIG)
 
     with col2:
@@ -32,9 +35,10 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
         reason_counts = departed_df['Exit Reason Category'].value_counts().reset_index()
         reason_counts.columns = ['Category', 'Count']
         fig = px.bar(reason_counts, x='Count', y='Category', orientation='h',
-                     color='Count', color_continuous_scale=[[0, '#FEE2E2'], [1, '#EF4444']])
+                     color='Count',
+                     color_continuous_scale=[[0, '#3B0764'], [0.5, '#7C3AED'], [1, '#D946EF']])
         fig.update_layout(yaxis={'categoryorder': 'total ascending'}, coloraxis_showscale=False)
-        fig.update_traces(marker_line_width=0)
+        fig.update_traces(marker_line_width=0, opacity=0.9)
         st.plotly_chart(_style(fig, 400), use_container_width=True, config=CHART_CONFIG)
 
     st.markdown("---")
@@ -55,10 +59,13 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
         'Count': [voluntary, involuntary]
     })
     fig = px.pie(vol_data, values='Count', names='Type',
-                 color_discrete_sequence=['#F59E0B', '#EF4444'], hole=0.55)
-    fig.update_traces(textinfo='percent+label', textfont_size=12,
-                      marker=dict(line=dict(color='#FFFFFF', width=2)))
-    fig.update_layout(showlegend=True, legend=dict(orientation='h', y=-0.1))
+                 color_discrete_sequence=['#06B6D4', '#EF4444'], hole=0.62)
+    fig.update_traces(
+        textinfo='percent+label', textfont_size=11, textfont_color='#E2E8F0',
+        marker=dict(line=dict(color='#0D0E1A', width=3)), pull=[0.04, 0],
+    )
+    fig.update_layout(showlegend=True, legend=dict(orientation='h', y=-0.12,
+                      font=dict(color='#94A3B8')))
     st.plotly_chart(_style(fig, 360), use_container_width=True, config=CHART_CONFIG)
 
     st.markdown("---")
@@ -75,10 +82,11 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
 
     fig = px.bar(dept_attrition, x='Department', y='Departure Rate %',
                  color='Departure Rate %',
-                 color_continuous_scale=[[0, '#D1FAE5'], [0.5, '#FEF3C7'], [1, '#EF4444']],
+                 color_continuous_scale=[[0, '#064E3B'], [0.5, '#7C3AED'], [1, '#EF4444']],
                  text='Departure Rate %')
     fig.update_traces(texttemplate='%{text:.1f}%', textposition='outside',
-                      marker_line_width=0)
+                      marker_line_width=0, opacity=0.92,
+                      textfont=dict(color='#94A3B8', size=10))
     fig.update_layout(xaxis_tickangle=-35, coloraxis_showscale=False)
     st.plotly_chart(_style(fig, 440), use_container_width=True, config=CHART_CONFIG)
 

@@ -3,33 +3,48 @@ import pandas as pd
 from datetime import datetime
 
 
+_DARK_BG   = 'rgba(0,0,0,0)'         # transparent — card provides background
+_GRID      = 'rgba(255,255,255,0.05)'
+_AXIS_LINE = 'rgba(255,255,255,0.08)'
+_TICK_CLR  = '#475569'
+_TEXT_CLR  = '#94A3B8'
+_FONT_FAM  = 'Space Grotesk, Inter, system-ui, sans-serif'
+
+
 def _style(fig, height=400):
-    """Apply consistent chart styling."""
+    """Apply dark-neon chart styling consistent with dashboard theme."""
     fig.update_layout(
         height=height,
-        font=dict(family='Inter, Segoe UI, sans-serif', size=12, color='#374151'),
-        paper_bgcolor='rgba(0,0,0,0)',
-        plot_bgcolor='rgba(0,0,0,0)',
-        margin=dict(t=48, b=40, l=40, r=24),
+        font=dict(family=_FONT_FAM, size=12, color=_TEXT_CLR),
+        paper_bgcolor=_DARK_BG,
+        plot_bgcolor=_DARK_BG,
+        margin=dict(t=44, b=36, l=36, r=20),
         legend=dict(
-            bgcolor='rgba(255,255,255,0.8)',
-            bordercolor='#E5E7EB',
+            bgcolor='rgba(22,23,40,0.8)',
+            bordercolor=_AXIS_LINE,
             borderwidth=1,
-            font=dict(size=11),
+            font=dict(size=11, color='#CBD5E1'),
         ),
         xaxis=dict(
-            gridcolor='#F3F4F6',
-            linecolor='#E5E7EB',
-            tickfont=dict(size=11),
-            title_font=dict(size=12, color='#6B7280'),
+            gridcolor=_GRID,
+            linecolor=_AXIS_LINE,
+            tickfont=dict(size=10, color=_TICK_CLR),
+            title_font=dict(size=11, color=_TICK_CLR),
+            showgrid=True,
         ),
         yaxis=dict(
-            gridcolor='#F3F4F6',
-            linecolor='#E5E7EB',
-            tickfont=dict(size=11),
-            title_font=dict(size=12, color='#6B7280'),
+            gridcolor=_GRID,
+            linecolor=_AXIS_LINE,
+            tickfont=dict(size=10, color=_TICK_CLR),
+            title_font=dict(size=11, color=_TICK_CLR),
+            showgrid=True,
         ),
-        title_font=dict(size=14, color='#111827', family='Inter, Segoe UI, sans-serif'),
+        title_font=dict(size=13, color='#E2E8F0', family=_FONT_FAM),
+        hoverlabel=dict(
+            bgcolor='#1E1F35',
+            bordercolor='rgba(124,58,237,0.5)',
+            font=dict(color='#F1F5F9', size=12),
+        ),
     )
     return fig
 

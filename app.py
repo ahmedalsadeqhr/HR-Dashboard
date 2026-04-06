@@ -20,104 +20,131 @@ def load_css():
     st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap');
 
     /* ======================================================
-       DESIGN TOKENS
+       DESIGN TOKENS  — Dark Neon Theme
     ====================================================== */
     :root {
-        --brand:        #0057B8;
-        --brand-dark:   #003D80;
-        --brand-light:  #E8F0FC;
-        --accent:       #FFD100;
-        --success:      #10B981;
+        /* Brand / accent */
+        --purple:       #7C3AED;
+        --purple-light: #A78BFA;
+        --cyan:         #06B6D4;
+        --cyan-light:   #67E8F9;
+        --magenta:      #D946EF;
+        --green:        #10B981;
+        --amber:        #F59E0B;
         --danger:       #EF4444;
-        --warning:      #F59E0B;
-        --purple:       #8B5CF6;
-        --sidebar-bg:   #0F172A;
-        --sidebar-text: #CBD5E1;
-        --sidebar-head: #F8FAFC;
-        --bg:           #F1F5F9;
-        --card:         #FFFFFF;
-        --border:       #E2E8F0;
-        --text-primary: #0F172A;
-        --text-secondary:#64748B;
-        --text-muted:   #94A3B8;
+
+        /* Gradients */
+        --grad-purple:  linear-gradient(135deg, #7C3AED 0%, #D946EF 100%);
+        --grad-cyan:    linear-gradient(135deg, #06B6D4 0%, #3B82F6 100%);
+        --grad-green:   linear-gradient(135deg, #10B981 0%, #06B6D4 100%);
+        --grad-amber:   linear-gradient(135deg, #F59E0B 0%, #EF4444 100%);
+
+        /* Backgrounds */
+        --bg:           #0D0E1A;
+        --bg-card:      #161728;
+        --bg-card2:     #1E1F35;
+        --bg-hover:     #222340;
+
+        /* Sidebar */
+        --sidebar-bg:   #0A0B15;
+        --sidebar-active: rgba(124,58,237,0.25);
+        --sidebar-border: rgba(124,58,237,0.35);
+
+        /* Text */
+        --text-primary:   #F1F5F9;
+        --text-secondary: #94A3B8;
+        --text-muted:     #475569;
+
+        /* Borders / dividers */
+        --border:       rgba(255,255,255,0.07);
+        --border-glow:  rgba(124,58,237,0.4);
     }
 
     /* ======================================================
-       GLOBAL RESET
+       GLOBAL
     ====================================================== */
     html, body, [class*="css"] {
-        font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+        font-family: 'Space Grotesk', 'Inter', system-ui, sans-serif !important;
         color: var(--text-primary);
     }
-
-    /* Remove Streamlit default padding */
     .block-container {
-        padding-top: 1.5rem !important;
+        padding-top: 1.25rem !important;
         padding-bottom: 2rem !important;
-        max-width: 1400px !important;
+        max-width: 1440px !important;
     }
-
-    /* Page background */
-    [data-testid="stAppViewContainer"] > .main {
-        background: var(--bg);
+    /* Full-page dark background */
+    [data-testid="stAppViewContainer"],
+    [data-testid="stAppViewContainer"] > .main,
+    .stApp {
+        background: var(--bg) !important;
     }
 
     /* ======================================================
-       DARK SIDEBAR
+       SIDEBAR — deep dark with purple glow
     ====================================================== */
     [data-testid="stSidebar"] {
         background: var(--sidebar-bg) !important;
-        border-right: none !important;
+        border-right: 1px solid var(--border) !important;
     }
     [data-testid="stSidebar"] * {
-        color: var(--sidebar-text) !important;
+        color: var(--text-secondary) !important;
     }
     [data-testid="stSidebar"] h1,
     [data-testid="stSidebar"] h2,
     [data-testid="stSidebar"] h3 {
-        color: var(--sidebar-head) !important;
-        font-weight: 700;
-        letter-spacing: 0.02em;
+        color: var(--text-primary) !important;
+        font-size: 0.65rem !important;
+        font-weight: 700 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.12em !important;
+        border-bottom: none !important;
+        padding-bottom: 0 !important;
+    }
+    [data-testid="stSidebar"] h2::before,
+    [data-testid="stSidebar"] h3::before {
+        display: none !important;
     }
     [data-testid="stSidebar"] .stSelectbox label,
     [data-testid="stSidebar"] .stMultiSelect label,
-    [data-testid="stSidebar"] .stDateInput label,
-    [data-testid="stSidebar"] .stFileUploader label {
-        color: var(--sidebar-text) !important;
-        font-weight: 500;
-        font-size: 0.8rem;
+    [data-testid="stSidebar"] .stDateInput label {
+        color: var(--text-muted) !important;
+        font-size: 0.72rem !important;
+        font-weight: 500 !important;
         text-transform: uppercase;
-        letter-spacing: 0.06em;
+        letter-spacing: 0.07em;
     }
-    /* Sidebar inputs */
     [data-testid="stSidebar"] [data-baseweb="select"] > div,
-    [data-testid="stSidebar"] [data-baseweb="input"] > div {
-        background: rgba(255,255,255,0.07) !important;
-        border-color: rgba(255,255,255,0.12) !important;
+    [data-testid="stSidebar"] [data-baseweb="input"] > div,
+    [data-testid="stSidebar"] [data-baseweb="base-input"] {
+        background: var(--bg-card2) !important;
+        border-color: var(--border) !important;
         border-radius: 8px !important;
+        color: var(--text-primary) !important;
     }
     [data-testid="stSidebar"] hr {
-        border-color: rgba(255,255,255,0.08) !important;
-        margin: 1rem 0;
+        border-color: var(--border) !important;
+        margin: 1.1rem 0 !important;
     }
+    /* Reset button — amber/yellow pill */
     [data-testid="stSidebar"] .stButton > button {
-        background: var(--accent) !important;
-        color: var(--sidebar-bg) !important;
-        font-weight: 700;
-        border: none;
-        border-radius: 8px;
-        width: 100%;
-        padding: 0.55rem 1rem;
-        transition: opacity 0.15s;
+        background: linear-gradient(135deg, #7C3AED, #D946EF) !important;
+        color: #FFFFFF !important;
+        font-weight: 700 !important;
+        border: none !important;
+        border-radius: 8px !important;
+        width: 100% !important;
+        padding: 0.5rem 1rem !important;
+        letter-spacing: 0.03em !important;
+        transition: opacity 0.15s !important;
     }
-    [data-testid="stSidebar"] .stButton > button:hover {
-        opacity: 0.88;
-    }
+    [data-testid="stSidebar"] .stButton > button:hover { opacity: 0.85 !important; }
     [data-testid="stSidebar"] [data-testid="stCaption"],
     [data-testid="stSidebar"] small {
         color: var(--text-muted) !important;
+        font-size: 0.7rem !important;
     }
 
     /* ======================================================
@@ -126,168 +153,216 @@ def load_css():
     .header-container {
         display: flex;
         align-items: center;
-        gap: 16px;
-        padding: 0.5rem 0 1.25rem 0;
+        gap: 14px;
+        padding: 0.4rem 0 1.2rem 0;
         border-bottom: 1px solid var(--border);
         margin-bottom: 1.5rem;
     }
     .header-logo {
-        height: 48px;
+        height: 46px;
         border-radius: 10px;
-        box-shadow: 0 2px 8px rgba(0,87,184,0.18);
+        box-shadow: 0 0 20px rgba(124,58,237,0.4);
     }
     .header-title {
-        font-size: 1.55rem;
+        font-size: 1.45rem;
         font-weight: 800;
         color: var(--text-primary);
         margin: 0;
         line-height: 1.2;
         letter-spacing: -0.02em;
+        background: linear-gradient(135deg, #A78BFA, #67E8F9);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
     }
     .header-subtitle {
-        font-size: 0.8rem;
+        font-size: 0.75rem;
         color: var(--text-muted);
-        margin: 2px 0 0 0;
+        margin: 3px 0 0 0;
         font-weight: 400;
     }
     .header-badge {
         margin-left: auto;
-        background: var(--brand-light);
-        color: var(--brand);
+        background: rgba(16,185,129,0.15);
+        border: 1px solid rgba(16,185,129,0.35);
+        color: #10B981;
         border-radius: 20px;
-        padding: 4px 14px;
-        font-size: 0.75rem;
-        font-weight: 600;
-        letter-spacing: 0.03em;
+        padding: 4px 12px;
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+    .header-badge::before {
+        content: '●';
+        font-size: 0.5rem;
+        animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50%       { opacity: 0.3; }
     }
 
     /* ======================================================
-       KPI CARDS
+       KPI SECTION LABEL
+    ====================================================== */
+    .kpi-section-label {
+        font-size: 0.65rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        color: var(--text-muted);
+        margin-bottom: 0.75rem;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .kpi-section-label::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: var(--border);
+    }
+
+    /* ======================================================
+       KPI CARDS — dark glass with gradient accent
     ====================================================== */
     [data-testid="stMetric"] {
-        background: var(--card);
+        background: var(--bg-card);
         border: 1px solid var(--border);
-        border-radius: 14px;
-        padding: 18px 20px 16px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+        border-radius: 16px;
+        padding: 20px 22px 18px;
         position: relative;
         overflow: hidden;
-        transition: transform 0.18s ease, box-shadow 0.18s ease;
+        transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s;
     }
+    /* Gradient left stripe */
     [data-testid="stMetric"]::before {
         content: '';
         position: absolute;
-        top: 0; left: 0; right: 0;
-        height: 3px;
-        background: linear-gradient(90deg, var(--brand), #3B82F6);
-        border-radius: 14px 14px 0 0;
+        top: 0; left: 0; bottom: 0;
+        width: 3px;
+        background: var(--grad-purple);
+        border-radius: 16px 0 0 16px;
+    }
+    /* Faint glow blob in corner */
+    [data-testid="stMetric"]::after {
+        content: '';
+        position: absolute;
+        top: -30px; right: -30px;
+        width: 100px; height: 100px;
+        background: radial-gradient(circle, rgba(124,58,237,0.18) 0%, transparent 70%);
+        border-radius: 50%;
+        pointer-events: none;
     }
     [data-testid="stMetric"]:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 10px 25px rgba(0,87,184,0.12);
+        transform: translateY(-4px);
+        border-color: var(--border-glow);
+        box-shadow: 0 8px 32px rgba(124,58,237,0.2);
     }
     [data-testid="stMetric"] label {
-        color: var(--text-secondary) !important;
-        font-size: 0.7rem;
+        color: var(--text-muted) !important;
+        font-size: 0.68rem;
         font-weight: 600;
         text-transform: uppercase;
-        letter-spacing: 0.08em;
+        letter-spacing: 0.09em;
     }
     [data-testid="stMetric"] [data-testid="stMetricValue"] {
         color: var(--text-primary) !important;
         font-weight: 800;
-        font-size: 1.6rem;
-        letter-spacing: -0.02em;
-        line-height: 1.2;
+        font-size: 1.7rem;
+        letter-spacing: -0.03em;
+        line-height: 1.15;
     }
     [data-testid="stMetric"] [data-testid="stMetricDelta"] {
-        font-size: 0.78rem;
+        font-size: 0.75rem;
         font-weight: 600;
     }
-
-    /* Colour-coded top bar per card position */
-    [data-testid="column"]:nth-child(2) [data-testid="stMetric"]::before {
-        background: linear-gradient(90deg, var(--success), #34D399);
-    }
-    [data-testid="column"]:nth-child(3) [data-testid="stMetric"]::before {
-        background: linear-gradient(90deg, var(--danger), #F87171);
-    }
-    [data-testid="column"]:nth-child(4) [data-testid="stMetric"]::before {
-        background: linear-gradient(90deg, var(--warning), #FCD34D);
-    }
+    /* Colour-code per column: purple / cyan / magenta / amber */
+    [data-testid="column"]:nth-child(1) [data-testid="stMetric"]::before { background: var(--grad-purple); }
+    [data-testid="column"]:nth-child(1) [data-testid="stMetric"]::after  { background: radial-gradient(circle, rgba(124,58,237,0.18) 0%, transparent 70%); }
+    [data-testid="column"]:nth-child(2) [data-testid="stMetric"]::before { background: var(--grad-cyan); }
+    [data-testid="column"]:nth-child(2) [data-testid="stMetric"]::after  { background: radial-gradient(circle, rgba(6,182,212,0.15) 0%, transparent 70%); }
+    [data-testid="column"]:nth-child(3) [data-testid="stMetric"]::before { background: var(--grad-amber); }
+    [data-testid="column"]:nth-child(3) [data-testid="stMetric"]::after  { background: radial-gradient(circle, rgba(239,68,68,0.12) 0%, transparent 70%); }
+    [data-testid="column"]:nth-child(4) [data-testid="stMetric"]::before { background: var(--grad-green); }
+    [data-testid="column"]:nth-child(4) [data-testid="stMetric"]::after  { background: radial-gradient(circle, rgba(16,185,129,0.12) 0%, transparent 70%); }
 
     /* ======================================================
-       SECTION HEADING STYLE
+       SECTION HEADINGS
     ====================================================== */
     h2, h3 {
         color: var(--text-primary) !important;
         font-weight: 700 !important;
-        font-size: 1rem !important;
-        letter-spacing: -0.01em;
+        font-size: 0.92rem !important;
+        letter-spacing: 0.01em !important;
         border-bottom: none !important;
         padding-bottom: 0 !important;
         margin-top: 1.5rem !important;
-        margin-bottom: 0.75rem !important;
+        margin-bottom: 0.6rem !important;
     }
     h2::before, h3::before {
         content: '';
         display: inline-block;
-        width: 4px;
-        height: 14px;
-        background: var(--brand);
+        width: 3px;
+        height: 12px;
+        background: var(--grad-purple);
         border-radius: 2px;
         margin-right: 8px;
         vertical-align: middle;
     }
 
     /* ======================================================
-       CHART CONTAINERS
+       CHART CONTAINERS — dark glass cards
     ====================================================== */
     [data-testid="stPlotlyChart"] {
-        background: var(--card);
-        border-radius: 14px;
-        padding: 8px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        background: var(--bg-card);
+        border-radius: 16px;
+        padding: 6px;
         border: 1px solid var(--border);
         margin-bottom: 1rem;
-        transition: box-shadow 0.18s ease;
+        transition: border-color 0.2s, box-shadow 0.2s;
     }
     [data-testid="stPlotlyChart"]:hover {
-        box-shadow: 0 8px 24px rgba(0,87,184,0.09);
+        border-color: rgba(124,58,237,0.3);
+        box-shadow: 0 4px 24px rgba(124,58,237,0.12);
     }
 
     /* ======================================================
-       TABS — pill style
+       TABS — pill, dark
     ====================================================== */
     .stTabs [data-baseweb="tab-list"] {
-        gap: 6px;
+        gap: 4px;
         border-bottom: none;
-        background: var(--card);
+        background: var(--bg-card);
         border-radius: 12px;
-        padding: 6px;
+        padding: 5px;
         border: 1px solid var(--border);
         display: inline-flex;
         margin-bottom: 1.25rem;
     }
     .stTabs [data-baseweb="tab"] {
         font-weight: 600;
-        font-size: 0.85rem;
-        padding: 8px 24px;
+        font-size: 0.82rem;
+        padding: 8px 22px;
         color: var(--text-secondary);
         border-radius: 8px;
         border: none !important;
-        transition: all 0.15s;
         background: transparent;
+        transition: all 0.15s;
+        letter-spacing: 0.02em;
     }
     .stTabs [data-baseweb="tab"]:hover {
-        color: var(--brand);
-        background: var(--brand-light);
+        color: var(--purple-light);
+        background: rgba(124,58,237,0.12);
     }
     .stTabs [aria-selected="true"] {
-        color: var(--card) !important;
-        background: var(--brand) !important;
-        border-radius: 8px;
-        box-shadow: 0 2px 8px rgba(0,87,184,0.3);
+        color: #FFFFFF !important;
+        background: var(--grad-purple) !important;
+        border-radius: 8px !important;
+        box-shadow: 0 2px 12px rgba(124,58,237,0.4) !important;
     }
 
     /* ======================================================
@@ -301,16 +376,12 @@ def load_css():
     }
 
     /* ======================================================
-       DATAFRAMES
+       DATAFRAMES — dark style
     ====================================================== */
     .stDataFrame {
         border-radius: 12px;
         overflow: hidden;
         border: 1px solid var(--border) !important;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-    }
-    .stDataFrame [data-testid="stDataFrameResizable"] {
-        border-radius: 12px;
     }
 
     /* ======================================================
@@ -318,42 +389,42 @@ def load_css():
     ====================================================== */
     .stDownloadButton > button,
     .stFormSubmitButton > button {
-        background: var(--brand);
+        background: var(--grad-purple);
         color: #FFFFFF !important;
         border: none;
         border-radius: 8px;
         font-weight: 600;
-        font-size: 0.85rem;
+        font-size: 0.83rem;
         padding: 8px 20px;
         transition: all 0.15s;
-        letter-spacing: 0.01em;
+        letter-spacing: 0.02em;
     }
     .stDownloadButton > button:hover,
     .stFormSubmitButton > button:hover {
-        background: var(--brand-dark);
+        opacity: 0.88;
         transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(0,87,184,0.3);
+        box-shadow: 0 4px 16px rgba(124,58,237,0.35);
     }
 
     /* ======================================================
        FORMS & INPUTS
     ====================================================== */
     [data-testid="stForm"] {
-        background: var(--card);
+        background: var(--bg-card);
         border: 1px solid var(--border);
         border-radius: 14px;
         padding: 1.5rem;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
     }
-    .stTextInput > div > div > input,
-    .stSelectbox > div > div {
+    .stTextInput > div > div > input {
+        background: var(--bg-card2) !important;
+        border-color: var(--border) !important;
         border-radius: 8px;
-        border-color: var(--border);
+        color: var(--text-primary) !important;
         transition: border-color 0.15s, box-shadow 0.15s;
     }
     .stTextInput > div > div > input:focus {
-        border-color: var(--brand);
-        box-shadow: 0 0 0 3px rgba(0,87,184,0.12);
+        border-color: var(--purple) !important;
+        box-shadow: 0 0 0 3px rgba(124,58,237,0.2) !important;
     }
 
     /* ======================================================
@@ -361,6 +432,8 @@ def load_css():
     ====================================================== */
     .stAlert {
         border-radius: 10px;
+        background: var(--bg-card) !important;
+        border: 1px solid var(--border) !important;
     }
 
     /* ======================================================
@@ -370,19 +443,16 @@ def load_css():
         display: inline-flex;
         align-items: center;
         gap: 6px;
-        background: var(--brand-light);
-        border: 1px solid rgba(0,87,184,0.2);
+        background: rgba(124,58,237,0.12);
+        border: 1px solid rgba(124,58,237,0.3);
         border-radius: 20px;
         padding: 5px 14px;
-        font-size: 0.78rem;
+        font-size: 0.75rem;
         font-weight: 600;
-        color: var(--brand);
+        color: var(--purple-light);
         margin-bottom: 1rem;
     }
-    .filter-badge::before {
-        content: '⚙';
-        font-size: 0.7rem;
-    }
+    .filter-badge::before { content: '⚙'; font-size: 0.68rem; }
 
     /* ======================================================
        SIDEBAR LOGO
@@ -390,33 +460,13 @@ def load_css():
     .sidebar-logo-container {
         text-align: center;
         padding: 1.25rem 0 1rem 0;
-        border-bottom: 1px solid rgba(255,255,255,0.08);
+        border-bottom: 1px solid var(--border);
         margin-bottom: 0.5rem;
     }
     .sidebar-logo {
-        height: 44px;
+        height: 42px;
         border-radius: 8px;
-    }
-
-    /* ======================================================
-       HEADER (fallback no-logo version)
-    ====================================================== */
-    .welcome-container {
-        text-align: center;
-        padding: 4rem 2rem;
-    }
-    .welcome-container h2 {
-        color: var(--text-primary) !important;
-        border: none !important;
-        font-size: 1.6rem;
-        margin-bottom: 0.5rem;
-    }
-    .welcome-container p {
-        color: var(--text-secondary);
-        font-size: 1rem;
-        max-width: 480px;
-        margin: 0 auto;
-        line-height: 1.6;
+        box-shadow: 0 0 16px rgba(124,58,237,0.3);
     }
 
     /* ======================================================
@@ -425,33 +475,31 @@ def load_css():
     .footer {
         text-align: center;
         color: var(--text-muted);
-        font-size: 0.78rem;
+        font-size: 0.75rem;
         padding: 1.5rem 0 0.5rem 0;
         border-top: 1px solid var(--border);
         margin-top: 2.5rem;
     }
-    .footer strong { color: var(--brand); }
-    .footer a { color: var(--brand); text-decoration: none; }
+    .footer strong {
+        background: var(--grad-purple);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
 
     /* ======================================================
-       KPI SECTION LABEL
+       WELCOME SCREEN
     ====================================================== */
-    .kpi-section-label {
-        font-size: 0.7rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.1em;
-        color: var(--text-muted);
-        margin-bottom: 0.75rem;
-        display: flex;
-        align-items: center;
-        gap: 8px;
+    .welcome-container {
+        text-align: center;
+        padding: 4rem 2rem;
     }
-    .kpi-section-label::after {
-        content: '';
-        flex: 1;
-        height: 1px;
-        background: var(--border);
+    .welcome-container h2 {
+        color: var(--text-primary) !important;
+        border: none !important;
+    }
+    .welcome-container p {
+        color: var(--text-secondary);
     }
 
     /* ======================================================
@@ -459,20 +507,21 @@ def load_css():
     ====================================================== */
     .stRadio > div { gap: 0 !important; }
     .stRadio [role="radiogroup"] label {
-        background: var(--card);
+        background: var(--bg-card);
         border: 1px solid var(--border);
         padding: 7px 18px;
         font-weight: 500;
-        font-size: 0.85rem;
+        font-size: 0.83rem;
+        color: var(--text-secondary);
         transition: all 0.15s;
         cursor: pointer;
     }
     .stRadio [role="radiogroup"] label:first-of-type { border-radius: 8px 0 0 8px; }
     .stRadio [role="radiogroup"] label:last-of-type  { border-radius: 0 8px 8px 0; }
     .stRadio [role="radiogroup"] label[data-checked="true"] {
-        background: var(--brand);
+        background: var(--grad-purple);
         color: #FFFFFF !important;
-        border-color: var(--brand);
+        border-color: transparent;
     }
     </style>
     """, unsafe_allow_html=True)
