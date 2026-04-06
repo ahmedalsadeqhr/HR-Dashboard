@@ -503,6 +503,43 @@ def load_css():
     }
 
     /* ======================================================
+       MULTISELECT TAGS — subtle dark purple, easy on the eyes
+    ====================================================== */
+    /* Tag pill */
+    [data-testid="stSidebar"] [data-baseweb="tag"] {
+        background-color: rgba(124,58,237,0.2) !important;
+        border: 1px solid rgba(124,58,237,0.4) !important;
+        border-radius: 6px !important;
+    }
+    /* Tag label text */
+    [data-testid="stSidebar"] [data-baseweb="tag"] span {
+        color: #C4B5FD !important;
+        font-size: 0.78rem !important;
+        font-weight: 500 !important;
+    }
+    /* Tag × close button */
+    [data-testid="stSidebar"] [data-baseweb="tag"] [role="button"] {
+        color: #A78BFA !important;
+    }
+    [data-testid="stSidebar"] [data-baseweb="tag"] [role="button"]:hover {
+        color: #EDE9FE !important;
+    }
+    /* Multiselect dropdown container */
+    [data-testid="stSidebar"] [data-baseweb="popover"] {
+        background: #1E1F35 !important;
+        border: 1px solid rgba(124,58,237,0.3) !important;
+    }
+
+    /* Sidebar date label override (for the bold markdown labels) */
+    [data-testid="stSidebar"] strong {
+        color: var(--text-muted) !important;
+        font-size: 0.72rem !important;
+        font-weight: 600 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.07em !important;
+    }
+
+    /* ======================================================
        RADIO TOGGLE
     ====================================================== */
     .stRadio > div { gap: 0 !important; }
@@ -595,20 +632,44 @@ st.sidebar.header("Filters")
 
 if st.sidebar.button("Reset All Filters"):
     for key in ['dept_filter', 'status_filter', 'gender_filter', 'emp_type_filter',
-                'nationality_filter', 'exit_type_filter']:
+                'nationality_filter', 'exit_type_filter',
+                'join_start', 'join_end', 'exit_start', 'exit_end']:
         st.session_state.pop(key, None)
     st.rerun()
 
-date_range = None
+# ---- Join Date: two separate pickers ----
+join_start = join_end = None
 if 'Join Date' in df.columns:
-    min_date = df['Join Date'].dropna().min().date()
-    max_date = df['Join Date'].dropna().max().date()
-    date_range = st.sidebar.date_input(
-        "Join Date Range",
-        value=(min_date, max_date),
-        min_value=min_date,
-        max_value=max_date,
+    jmin = df['Join Date'].dropna().min().date()
+    jmax = df['Join Date'].dropna().max().date()
+    st.sidebar.markdown("**Join Date — From**")
+    join_start = st.sidebar.date_input(
+        "join_from", value=jmin, min_value=jmin, max_value=jmax,
+        label_visibility="collapsed", key="join_start",
     )
+    st.sidebar.markdown("**Join Date — To**")
+    join_end = st.sidebar.date_input(
+        "join_to", value=jmax, min_value=jmin, max_value=jmax,
+        label_visibility="collapsed", key="join_end",
+    )
+
+# ---- Exit Date: two separate pickers ----
+exit_start = exit_end = None
+if 'Exit Date' in df.columns:
+    exit_dates = df['Exit Date'].dropna()
+    if len(exit_dates) > 0:
+        emin = exit_dates.min().date()
+        emax = exit_dates.max().date()
+        st.sidebar.markdown("**Exit Date — From**")
+        exit_start = st.sidebar.date_input(
+            "exit_from", value=emin, min_value=emin, max_value=emax,
+            label_visibility="collapsed", key="exit_start",
+        )
+        st.sidebar.markdown("**Exit Date — To**")
+        exit_end = st.sidebar.date_input(
+            "exit_to", value=emax, min_value=emin, max_value=emax,
+            label_visibility="collapsed", key="exit_end",
+        )
 
 all_depts = sorted(df['Department'].dropna().unique().tolist())
 dept_filter = st.sidebar.multiselect("Department", all_depts, default=all_depts)
@@ -635,14 +696,26 @@ exit_type_filter = st.sidebar.selectbox(
 # Apply filters
 filtered_df = df.copy()
 
-if date_range is not None and isinstance(date_range, tuple):
-    if len(date_range) == 2:
+if join_start and join_end and 'Join Date' in filtered_df.columns:
+    if join_start <= join_end:
         filtered_df = filtered_df[
-            (filtered_df['Join Date'].dt.date >= date_range[0]) &
-            (filtered_df['Join Date'].dt.date <= date_range[1])
+            (filtered_df['Join Date'].dt.date >= join_start) &
+            (filtered_df['Join Date'].dt.date <= join_end)
         ]
     else:
-        st.warning("Please select both a start and end date for the Join Date Range filter.")
+        st.sidebar.warning("Join 'From' date must be before 'To' date.")
+
+if exit_start and exit_end and 'Exit Date' in filtered_df.columns:
+    if exit_start <= exit_end:
+        filtered_df = filtered_df[
+            filtered_df['Exit Date'].isna() |
+            (
+                (filtered_df['Exit Date'].dt.date >= exit_start) &
+                (filtered_df['Exit Date'].dt.date <= exit_end)
+            )
+        ]
+    else:
+        st.sidebar.warning("Exit 'From' date must be before 'To' date.")
 
 if dept_filter:
     filtered_df = filtered_df[filtered_df['Department'].isin(dept_filter)]
