@@ -631,7 +631,7 @@ st.sidebar.markdown("---")
 st.sidebar.header("Filters")
 
 if st.sidebar.button("Reset All Filters"):
-    for key in ['dept_filter', 'status_filter', 'gender_filter', 'emp_type_filter',
+    for key in ['dept_filter', 'status_filter', 'gender_filter', 'vendor_filter',
                 'nationality_filter', 'exit_type_filter',
                 'join_start', 'join_end', 'exit_start', 'exit_end']:
         st.session_state.pop(key, None)
@@ -677,11 +677,11 @@ dept_filter = st.sidebar.multiselect("Department", all_depts, default=all_depts)
 status_filter = st.sidebar.selectbox("Employee Status", ["All", "Active", "Departed"])
 gender_filter = st.sidebar.selectbox("Gender", ["All"] + df['Gender'].dropna().unique().tolist())
 
-if 'Employment Type' in df.columns:
-    emp_types = df['Employment Type'].dropna().unique().tolist()
-    emp_type_filter = st.sidebar.selectbox("Employment Type", ["All"] + emp_types)
+if 'Vendor' in df.columns:
+    vendors = sorted(df['Vendor'].dropna().unique().tolist())
+    vendor_filter = st.sidebar.selectbox("Vendor", ["All"] + vendors)
 else:
-    emp_type_filter = "All"
+    vendor_filter = "All"
 
 if 'Nationality' in df.columns:
     nationalities = sorted(df['Nationality'].dropna().unique().tolist())
@@ -723,8 +723,8 @@ if status_filter != "All":
     filtered_df = filtered_df[filtered_df['Employee Status'] == status_filter]
 if gender_filter != "All":
     filtered_df = filtered_df[filtered_df['Gender'] == gender_filter]
-if emp_type_filter != "All":
-    filtered_df = filtered_df[filtered_df['Employment Type'] == emp_type_filter]
+if vendor_filter != "All":
+    filtered_df = filtered_df[filtered_df['Vendor'] == vendor_filter]
 if nationality_filter != "All":
     filtered_df = filtered_df[filtered_df['Nationality'] == nationality_filter]
 if exit_type_filter != "All":
