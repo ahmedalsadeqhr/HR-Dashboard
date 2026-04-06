@@ -109,78 +109,109 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
             .reset_index()
         )
         bucket_counts.columns = ['Tenure Bucket', 'Count']
-        bucket_counts['Label'] = bucket_counts.apply(
-            lambda r: f"{r['Tenure Bucket']}: {int(r['Count'])} ({r['Count']/len(tenure_data)*100:.1f}%)",
-            axis=1
-        )
+        total_dep = len(tenure_data)
         fig = px.pie(
             bucket_counts, values='Count', names='Tenure Bucket',
-            color_discrete_sequence=_NEON, hole=0.0,
+            color_discrete_sequence=_NEON,
         )
         fig.update_traces(
-            textinfo='label+percent+value',
-            textfont_size=11, textfont_color='#E2E8F0',
+            texttemplate='<b>%{label}</b><br>%{value} (%{percent})',
+            textposition='outside',
+            textfont_size=12, textfont_color='#CBD5E1',
             marker=dict(line=dict(color='#0D0E1A', width=2)),
+            pull=[0.04] * len(bucket_counts),
         )
-        fig.update_layout(showlegend=True,
-                          legend=dict(orientation='h', y=-0.15, font=dict(color='#94A3B8')))
-        st.plotly_chart(_style(fig, 420), use_container_width=True, config=CHART_CONFIG)
+        fig.update_layout(
+            title=None,
+            showlegend=True,
+            legend=dict(orientation='h', y=-0.08, font=dict(color='#94A3B8', size=12)),
+            margin=dict(t=20, b=80, l=80, r=80),
+        )
+        st.plotly_chart(_style(fig, 540), use_container_width=True, config=CHART_CONFIG)
     else:
         st.info("Tenure data not available.")
 
     st.markdown("---")
 
     # ── 2. Voluntary exit reason breakdown ────────────────────────────────
-    # ── 3. Involuntary exit reason breakdown ──────────────────────────────
     if 'Exit Reason Category' in departed_df.columns:
-        vol_df  = departed_df[departed_df['Exit Type'].isin(_VOLUNTARY_TYPES)]
+        vol_df   = departed_df[departed_df['Exit Type'].isin(_VOLUNTARY_TYPES)]
         invol_df = departed_df[departed_df['Exit Type'].isin(_INVOLUNTARY_TYPES)]
 
-        col1, col2 = st.columns(2)
+        st.subheader(f"Voluntary Exit Reasons — {len(vol_df)} employees (Resigned / Dropped)")
+        if len(vol_df) > 0:
+            vol_reasons = (
+                vol_df['Exit Reason Category'].dropna()
+                .value_counts().reset_index()
+            )
+            vol_reasons.columns = ['Reason', 'Count']
+            vol_total = vol_reasons['Count'].sum()
+            vol_reasons['Pct'] = (vol_reasons['Count'] / vol_total * 100).round(1)
+            vol_reasons['Label'] = vol_reasons.apply(
+                lambda r: f"{r['Count']}  ({r['Pct']}%)", axis=1
+            )
+            fig = px.bar(
+                vol_reasons.sort_values('Count'),
+                x='Count', y='Reason', orientation='h',
+                text='Label',
+                color='Count',
+                color_continuous_scale=[[0, '#1E1B4B'], [0.5, '#7C3AED'], [1, '#06B6D4']],
+            )
+            fig.update_traces(
+                textposition='outside',
+                textfont=dict(color='#CBD5E1', size=12),
+                marker_line_width=0,
+            )
+            fig.update_layout(
+                title=None,
+                coloraxis_showscale=False,
+                xaxis=dict(title='Number of Employees'),
+                yaxis=dict(title=None, tickfont=dict(size=12, color='#94A3B8')),
+                margin=dict(t=10, b=40, l=200, r=100),
+            )
+            st.plotly_chart(_style(fig, max(380, len(vol_reasons) * 44)),
+                            use_container_width=True, config=CHART_CONFIG)
+        else:
+            st.info("No voluntary departures in current selection.")
 
-        with col1:
-            st.subheader(f"Voluntary Exit Reasons ({len(vol_df)} employees)")
-            if len(vol_df) > 0:
-                vol_reasons = (
-                    vol_df['Exit Reason Category'].dropna()
-                    .value_counts().reset_index()
-                )
-                vol_reasons.columns = ['Reason', 'Count']
-                fig = px.pie(vol_reasons, values='Count', names='Reason',
-                             color_discrete_sequence=_NEON, hole=0.0)
-                fig.update_traces(
-                    textinfo='label+percent+value',
-                    textfont_size=10, textfont_color='#E2E8F0',
-                    marker=dict(line=dict(color='#0D0E1A', width=2)),
-                )
-                fig.update_layout(showlegend=True,
-                                  legend=dict(orientation='h', y=-0.18,
-                                              font=dict(color='#94A3B8', size=10)))
-                st.plotly_chart(_style(fig, 420), use_container_width=True, config=CHART_CONFIG)
-            else:
-                st.info("No voluntary departures in current selection.")
+        st.markdown("---")
 
-        with col2:
-            st.subheader(f"Involuntary Exit Reasons ({len(invol_df)} employees)")
-            if len(invol_df) > 0:
-                invol_reasons = (
-                    invol_df['Exit Reason Category'].dropna()
-                    .value_counts().reset_index()
-                )
-                invol_reasons.columns = ['Reason', 'Count']
-                fig = px.pie(invol_reasons, values='Count', names='Reason',
-                             color_discrete_sequence=_NEON[::-1], hole=0.0)
-                fig.update_traces(
-                    textinfo='label+percent+value',
-                    textfont_size=10, textfont_color='#E2E8F0',
-                    marker=dict(line=dict(color='#0D0E1A', width=2)),
-                )
-                fig.update_layout(showlegend=True,
-                                  legend=dict(orientation='h', y=-0.18,
-                                              font=dict(color='#94A3B8', size=10)))
-                st.plotly_chart(_style(fig, 420), use_container_width=True, config=CHART_CONFIG)
-            else:
-                st.info("No involuntary departures in current selection.")
+        # ── 3. Involuntary exit reason breakdown ──────────────────────────
+        st.subheader(f"Involuntary Exit Reasons — {len(invol_df)} employees (Terminated)")
+        if len(invol_df) > 0:
+            invol_reasons = (
+                invol_df['Exit Reason Category'].dropna()
+                .value_counts().reset_index()
+            )
+            invol_reasons.columns = ['Reason', 'Count']
+            invol_total = invol_reasons['Count'].sum()
+            invol_reasons['Pct'] = (invol_reasons['Count'] / invol_total * 100).round(1)
+            invol_reasons['Label'] = invol_reasons.apply(
+                lambda r: f"{r['Count']}  ({r['Pct']}%)", axis=1
+            )
+            fig = px.bar(
+                invol_reasons.sort_values('Count'),
+                x='Count', y='Reason', orientation='h',
+                text='Label',
+                color='Count',
+                color_continuous_scale=[[0, '#450A0A'], [0.5, '#EF4444'], [1, '#F97316']],
+            )
+            fig.update_traces(
+                textposition='outside',
+                textfont=dict(color='#CBD5E1', size=12),
+                marker_line_width=0,
+            )
+            fig.update_layout(
+                title=None,
+                coloraxis_showscale=False,
+                xaxis=dict(title='Number of Employees'),
+                yaxis=dict(title=None, tickfont=dict(size=12, color='#94A3B8')),
+                margin=dict(t=10, b=40, l=200, r=100),
+            )
+            st.plotly_chart(_style(fig, max(380, len(invol_reasons) * 44)),
+                            use_container_width=True, config=CHART_CONFIG)
+        else:
+            st.info("No involuntary departures in current selection.")
 
     st.markdown("---")
 
