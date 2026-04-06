@@ -637,6 +637,10 @@ if st.sidebar.button("Reset All Filters"):
         st.session_state.pop(key, None)
     st.rerun()
 
+status_filter = st.sidebar.selectbox("Employee Status", ["All", "Active", "Departed"])
+
+st.sidebar.markdown("---")
+
 # ---- Join Date: two separate pickers ----
 join_start = join_end = None
 if 'Join Date' in df.columns:
@@ -674,7 +678,6 @@ if 'Exit Date' in df.columns:
 all_depts = sorted(df['Department'].dropna().unique().tolist())
 dept_filter = st.sidebar.multiselect("Department", all_depts, default=all_depts)
 
-status_filter = st.sidebar.selectbox("Employee Status", ["All", "Active", "Departed"])
 gender_filter = st.sidebar.selectbox("Gender", ["All"] + df['Gender'].dropna().unique().tolist())
 
 if 'Vendor' in df.columns:
