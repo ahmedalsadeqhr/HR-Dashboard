@@ -7,11 +7,29 @@ def _style(fig, height=400):
     """Apply consistent chart styling."""
     fig.update_layout(
         height=height,
-        font=dict(family='Inter, Segoe UI, sans-serif'),
+        font=dict(family='Inter, Segoe UI, sans-serif', size=12, color='#374151'),
         paper_bgcolor='rgba(0,0,0,0)',
         plot_bgcolor='rgba(0,0,0,0)',
-        margin=dict(t=40, b=40, l=40, r=20),
-        legend=dict(bgcolor='rgba(0,0,0,0)'),
+        margin=dict(t=48, b=40, l=40, r=24),
+        legend=dict(
+            bgcolor='rgba(255,255,255,0.8)',
+            bordercolor='#E5E7EB',
+            borderwidth=1,
+            font=dict(size=11),
+        ),
+        xaxis=dict(
+            gridcolor='#F3F4F6',
+            linecolor='#E5E7EB',
+            tickfont=dict(size=11),
+            title_font=dict(size=12, color='#6B7280'),
+        ),
+        yaxis=dict(
+            gridcolor='#F3F4F6',
+            linecolor='#E5E7EB',
+            tickfont=dict(size=11),
+            title_font=dict(size=12, color='#6B7280'),
+        ),
+        title_font=dict(size=14, color='#111827', family='Inter, Segoe UI, sans-serif'),
     )
     return fig
 

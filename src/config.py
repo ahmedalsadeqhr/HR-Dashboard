@@ -1,22 +1,21 @@
 COLORS = {
-    'primary': '#0057B8',
+    'primary':   '#0057B8',
     'secondary': '#FFD100',
-    'success': '#28A745',
-    'danger': '#DC3545',
-    'warning': '#FFC107',
-    'info': '#17A2B8',
-    'purple': '#6F42C1',
-    'pink': '#E83E8C',
-    'brown': '#8C564B',
-    'gray': '#6C757D',
-    'light': '#F8F9FA',
-    'dark': '#343A40',
+    'success':   '#10B981',
+    'danger':    '#EF4444',
+    'warning':   '#F59E0B',
+    'info':      '#06B6D4',
+    'purple':    '#8B5CF6',
+    'pink':      '#E879F9',
+    'brown':     '#92400E',
+    'gray':      '#64748B',
+    'light':     '#F1F5F9',
+    'dark':      '#0F172A',
 }
 
 COLOR_SEQUENCE = [
-    COLORS['primary'], COLORS['success'], COLORS['danger'],
-    COLORS['warning'], COLORS['info'], COLORS['purple'],
-    COLORS['pink'], COLORS['brown'],
+    '#0057B8', '#10B981', '#8B5CF6', '#F59E0B',
+    '#EF4444', '#06B6D4', '#E879F9', '#92400E',
 ]
 
 DATA_FILE = "Master.xlsx"
