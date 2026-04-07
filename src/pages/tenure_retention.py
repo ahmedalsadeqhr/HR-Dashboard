@@ -117,63 +117,53 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
 
     st.markdown("---")
 
-    # ── Probation Pass/Fail Rate by Department ────────────────────────────
-    st.subheader("Probation Pass / Fail Rate by Department")
-    if 'Probation Completed' in filtered_df.columns:
-        prob_df = filtered_df[filtered_df['Probation Completed'] != 'No Data'].copy()
-        if len(prob_df) > 0:
-            prob_df['Outcome'] = prob_df['Probation Completed'].map(
-                lambda s: 'Passed' if s in ('Completed', 'Completed Before Exit') else
-                          'Left During Probation' if s == 'Left During Probation' else 'In Probation'
-            )
-            prob_dept = (
-                prob_df.groupby(['Department', 'Outcome']).size()
-                .reset_index(name='Count')
-            )
-            dept_totals = prob_dept.groupby('Department')['Count'].transform('sum')
-            prob_dept['Pct'] = (prob_dept['Count'] / dept_totals * 100).round(1)
+    # ── Early Departure Rate by Department (<3 months) ───────────────────
+    st.subheader("Early Departure Rate by Department (Left within 3 Months)")
+    dep_df_all = filtered_df[filtered_df['Employee Status'] == 'Departed']
 
-            # Summary metrics
-            passed = (prob_df['Outcome'] == 'Passed').sum() if 'Outcome' in prob_df.columns else 0
-            left   = (prob_df['Probation Completed'] == 'Left During Probation').sum()
-            total_prob = len(prob_df)
-            c1, c2, c3 = st.columns(3)
-            c1.metric("Passed Probation", f"{passed:,} ({passed/total_prob*100:.1f}%)")
-            c2.metric("Left During Probation", f"{left:,} ({left/total_prob*100:.1f}%)")
-            c3.metric("Employees in Scope", f"{total_prob:,}")
+    if len(dep_df_all) > 0 and 'Tenure (Months)' in dep_df_all.columns:
+        dept_stats = dep_df_all.groupby('Department').agg(
+            Total_Departed=('Tenure (Months)', 'count'),
+            Early_Departed=('Tenure (Months)', lambda x: (x <= 3).sum()),
+        ).reset_index()
+        dept_stats['Early Departure Rate %'] = (
+            dept_stats['Early_Departed'] / dept_stats['Total_Departed'] * 100
+        ).round(1)
+        dept_stats = dept_stats.sort_values('Early Departure Rate %', ascending=False)
 
-            fig = px.bar(
-                prob_dept, x='Department', y='Pct', color='Outcome',
-                color_discrete_map={
-                    'Passed':               '#10B981',
-                    'Left During Probation':'#EF4444',
-                    'In Probation':         '#F59E0B',
-                },
-                barmode='stack', text='Pct',
-            )
-            fig.update_traces(texttemplate='%{text:.0f}%', textposition='inside',
-                              textfont=dict(color='#FFFFFF', size=10))
-            fig.update_layout(
-                xaxis_tickangle=-35,
-                yaxis=dict(title='% of Employees', ticksuffix='%'),
-                legend=dict(orientation='h', y=1.08),
-            )
-            st.plotly_chart(_style(fig, 460), use_container_width=True, config=CHART_CONFIG)
+        # Summary KPIs
+        total_dep   = len(dep_df_all)
+        early_dep   = (dep_df_all['Tenure (Months)'] <= 3).sum()
+        c1, c2, c3  = st.columns(3)
+        c1.metric("Total Departed", f"{total_dep:,}")
+        c2.metric("Left Within 3 Months", f"{early_dep:,}")
+        c3.metric("Early Departure Rate", f"{early_dep / total_dep * 100:.1f}%")
 
-            # Detail table
-            prob_table = (
-                prob_df.groupby('Department')['Outcome']
-                .value_counts().unstack(fill_value=0).reset_index()
-            )
-            if 'Passed' in prob_table.columns and 'Left During Probation' in prob_table.columns:
-                prob_table['Pass Rate %'] = (
-                    prob_table['Passed'] / prob_table.iloc[:, 1:].sum(axis=1) * 100
-                ).round(1)
-            st.dataframe(prob_table, use_container_width=True, hide_index=True)
-        else:
-            st.info("No probation data available.")
+        fig = px.bar(
+            dept_stats, x='Department', y='Early Departure Rate %',
+            text='Early Departure Rate %',
+            color='Early Departure Rate %',
+            color_continuous_scale=[[0, '#064E3B'], [0.5, '#F59E0B'], [1, '#EF4444']],
+            hover_data={'Total_Departed': True, 'Early_Departed': True},
+        )
+        fig.update_traces(
+            texttemplate='%{text:.1f}%', textposition='outside',
+            textfont=dict(color='#CBD5E1', size=11), marker_line_width=0,
+        )
+        fig.update_layout(
+            coloraxis_showscale=False,
+            xaxis_tickangle=-35,
+            yaxis=dict(title='% of Departed Employees', ticksuffix='%'),
+        )
+        st.plotly_chart(_style(fig, 460), use_container_width=True, config=CHART_CONFIG)
+
+        dept_stats = dept_stats.rename(columns={
+            'Total_Departed': 'Total Departed',
+            'Early_Departed': 'Left ≤ 3 Months',
+        })
+        st.dataframe(dept_stats, use_container_width=True, hide_index=True)
     else:
-        st.info("Probation Completed column not found in data.")
+        st.info("No departure data available.")
 
     st.markdown("---")
 
