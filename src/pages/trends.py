@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 
 from src.utils import _style
 
@@ -8,29 +9,53 @@ from src.utils import _style
 def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG):
     trends_dep_df = filtered_df[filtered_df['Employee Status'] == 'Departed']
 
-    col1, col2 = st.columns(2)
+    # ── Combined Hiring vs Departure trend ────────────────────────────────
+    st.subheader("Monthly Hiring vs Departures")
+    if 'Join Month' in filtered_df.columns:
+        hiring  = filtered_df.groupby('Join Month').size().rename('Hires')
+        exits   = (
+            trends_dep_df.groupby('Exit Month').size().rename('Exits')
+            if len(trends_dep_df) > 0 and 'Exit Month' in trends_dep_df.columns
+            else pd.Series(dtype=int)
+        )
+        all_months = sorted(set(hiring.index.tolist() + exits.index.tolist()))
+        combined = pd.DataFrame({'Month': all_months})
+        combined['Hires']  = combined['Month'].map(hiring).fillna(0).astype(int)
+        combined['Exits']  = combined['Month'].map(exits).fillna(0).astype(int)
+        combined['Net']    = combined['Hires'] - combined['Exits']
 
-    with col1:
-        st.subheader("Hiring Trend by Month")
-        if 'Join Month' in filtered_df.columns:
-            hiring = filtered_df.groupby('Join Month').size().reset_index(name='Hires')
-            fig = px.line(hiring, x='Join Month', y='Hires', markers=True,
-                          color_discrete_sequence=[COLORS['success']])
-            fig.update_traces(line_width=3)
-            fig.update_layout(xaxis_tickangle=-45)
-            st.plotly_chart(_style(fig, 350), use_container_width=True, config=CHART_CONFIG)
-
-    with col2:
-        st.subheader("Attrition Trend by Month")
-        if len(trends_dep_df) > 0 and 'Exit Month' in trends_dep_df.columns:
-            attrition = trends_dep_df.groupby('Exit Month').size().reset_index(name='Exits')
-            fig = px.line(attrition, x='Exit Month', y='Exits', markers=True,
-                          color_discrete_sequence=[COLORS['danger']])
-            fig.update_traces(line_width=3)
-            fig.update_layout(xaxis_tickangle=-45)
-            st.plotly_chart(_style(fig, 350), use_container_width=True, config=CHART_CONFIG)
-        else:
-            st.info("No departed employees in current selection.")
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(
+            x=combined['Month'], y=combined['Hires'],
+            name='Hires', mode='lines+markers',
+            line=dict(color='#10B981', width=2.5),
+            marker=dict(size=6),
+            fill='tozeroy', fillcolor='rgba(16,185,129,0.07)',
+        ))
+        fig.add_trace(go.Scatter(
+            x=combined['Month'], y=combined['Exits'],
+            name='Departures', mode='lines+markers',
+            line=dict(color='#EF4444', width=2.5),
+            marker=dict(size=6),
+            fill='tozeroy', fillcolor='rgba(239,68,68,0.07)',
+        ))
+        fig.add_trace(go.Bar(
+            x=combined['Month'], y=combined['Net'],
+            name='Net Headcount Change',
+            marker_color=[('#10B981' if v >= 0 else '#EF4444') for v in combined['Net']],
+            opacity=0.35, yaxis='y2',
+        ))
+        fig.update_layout(
+            yaxis2=dict(overlaying='y', side='right', showgrid=False,
+                        title='Net Change', title_font=dict(color='#475569'),
+                        tickfont=dict(color='#475569')),
+            xaxis=dict(tickangle=-45),
+            legend=dict(orientation='h', y=1.08),
+            hovermode='x unified',
+        )
+        st.plotly_chart(_style(fig, 460), use_container_width=True, config=CHART_CONFIG)
+    else:
+        st.info("Join Month data not available.")
 
     st.markdown("---")
 
