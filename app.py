@@ -710,13 +710,16 @@ if join_start and join_end and 'Join Date' in filtered_df.columns:
 
 if exit_start and exit_end and 'Exit Date' in filtered_df.columns:
     if exit_start <= exit_end:
-        filtered_df = filtered_df[
-            filtered_df['Exit Date'].isna() |
-            (
-                (filtered_df['Exit Date'].dt.date >= exit_start) &
-                (filtered_df['Exit Date'].dt.date <= exit_end)
-            )
-        ]
+        exit_filter_active = (exit_start != emin) or (exit_end != emax)
+        if exit_filter_active:
+            # Only filter rows that have an exit date; active employees (no exit date) are unaffected
+            filtered_df = filtered_df[
+                filtered_df['Exit Date'].isna() |
+                (
+                    (filtered_df['Exit Date'].dt.date >= exit_start) &
+                    (filtered_df['Exit Date'].dt.date <= exit_end)
+                )
+            ]
     else:
         st.sidebar.warning("Exit 'From' date must be before 'To' date.")
 
