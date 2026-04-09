@@ -1,100 +1,238 @@
-"""Build all dashboard charts and export them as a single interactive HTML report."""
+"""Build all dashboard charts as native Excel charts in a multi-sheet workbook."""
 
 import io
 from datetime import datetime
 
 import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
-import plotly.io as pio
+from openpyxl import Workbook
+from openpyxl.chart import BarChart, PieChart, LineChart, Reference
+from openpyxl.chart.series import DataPoint
+from openpyxl.chart.label import DataLabelList
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+from openpyxl.utils import get_column_letter
 
-from src.utils import _style
 
-_NEON = ['#06B6D4', '#7C3AED', '#D946EF', '#10B981', '#F59E0B', '#EF4444', '#3B82F6', '#F97316']
+# ── Theme colours (ARGB hex without #) ────────────────────────────────────
+_PURPLE = '7C3AED'
+_CYAN   = '06B6D4'
+_RED    = 'EF4444'
+_GREEN  = '10B981'
+_AMBER  = 'F59E0B'
+_MAGENTA = 'D946EF'
+_BLUE   = '3B82F6'
+_ORANGE = 'F97316'
+_PALETTE = [_PURPLE, _CYAN, _RED, _GREEN, _AMBER, _MAGENTA, _BLUE, _ORANGE]
+
+_HEADER_FILL = PatternFill('solid', fgColor='1E1F35')
+_HEADER_FONT = Font(bold=True, size=11, color='FFFFFF')
+_TITLE_FONT  = Font(bold=True, size=13, color=_PURPLE)
+_THIN_BORDER = Border(
+    bottom=Side(style='thin', color='CCCCCC'),
+)
 
 
-def _chart_html(fig, title: str, first: bool = False) -> str:
-    """Return an HTML block with a section title + embedded Plotly chart."""
-    plotlyjs = 'cdn' if first else False
-    chart = pio.to_html(fig, include_plotlyjs=plotlyjs, full_html=False,
-                        config={'displayModeBar': True, 'responsive': True})
-    return f"""
-    <div class="chart-block">
-        <h2>{title}</h2>
-        {chart}
-    </div>
-    """
+def _write_table(ws, df: pd.DataFrame, start_row: int = 1) -> int:
+    """Write a DataFrame as a formatted table starting at start_row. Returns next free row."""
+    # Headers
+    for c_idx, col_name in enumerate(df.columns, 1):
+        cell = ws.cell(row=start_row, column=c_idx, value=col_name)
+        cell.font = _HEADER_FONT
+        cell.fill = _HEADER_FILL
+        cell.alignment = Alignment(horizontal='center')
+        cell.border = _THIN_BORDER
+    # Data rows
+    for r_idx, row in enumerate(df.itertuples(index=False), start_row + 1):
+        for c_idx, val in enumerate(row, 1):
+            cell = ws.cell(row=r_idx, column=c_idx, value=val)
+            cell.alignment = Alignment(horizontal='center')
+    # Auto-width
+    for c_idx in range(1, len(df.columns) + 1):
+        col_letter = get_column_letter(c_idx)
+        max_len = max(len(str(df.columns[c_idx - 1])),
+                      df.iloc[:, c_idx - 1].astype(str).str.len().max() if len(df) > 0 else 0)
+        ws.column_dimensions[col_letter].width = min(max_len + 4, 30)
+    return start_row + len(df) + 1
+
+
+def _add_title(ws, title: str, row: int = 1):
+    cell = ws.cell(row=row, column=1, value=title)
+    cell.font = _TITLE_FONT
+
+
+def _style_chart(chart, title: str, width: int = 18, height: int = 12):
+    chart.title = title
+    chart.width = width
+    chart.height = height
+    chart.legend.position = 'b'
+    chart.style = 10
+
+
+def _pie(ws, df: pd.DataFrame, title: str, cat_col: int, val_col: int,
+         data_start: int, data_end: int, anchor: str):
+    """Add a pie chart to the worksheet."""
+    chart = PieChart()
+    chart.title = title
+    chart.width = 16
+    chart.height = 12
+    chart.style = 10
+
+    data = Reference(ws, min_col=val_col, min_row=data_start, max_row=data_end)
+    cats = Reference(ws, min_col=cat_col, min_row=data_start + 1, max_row=data_end)
+    chart.add_data(data, titles_from_data=True)
+    chart.set_categories(cats)
+
+    # Colour slices
+    for i in range(data_end - data_start):
+        pt = DataPoint(idx=i)
+        pt.graphicalProperties.solidFill = _PALETTE[i % len(_PALETTE)]
+        chart.series[0].data_points.append(pt)
+
+    chart.series[0].dLbls = DataLabelList()
+    chart.series[0].dLbls.showPercent = True
+    chart.series[0].dLbls.showCatName = True
+
+    ws.add_chart(chart, anchor)
+
+
+def _bar(ws, df: pd.DataFrame, title: str, cat_col: int,
+         val_cols: list[int], data_start: int, data_end: int,
+         anchor: str, colours: list[str] | None = None, width: int = 18):
+    """Add a bar chart."""
+    chart = BarChart()
+    _style_chart(chart, title, width=width)
+    chart.type = 'col'
+    chart.grouping = 'clustered'
+
+    cats = Reference(ws, min_col=cat_col, min_row=data_start + 1, max_row=data_end)
+    chart.set_categories(cats)
+
+    for i, vc in enumerate(val_cols):
+        data = Reference(ws, min_col=vc, min_row=data_start, max_row=data_end)
+        chart.add_data(data, titles_from_data=True)
+        if colours and i < len(colours):
+            chart.series[i].graphicalProperties.solidFill = colours[i]
+
+    chart.series[0].dLbls = DataLabelList()
+    chart.series[0].dLbls.showVal = True
+
+    ws.add_chart(chart, anchor)
+
+
+def _hbar(ws, df: pd.DataFrame, title: str, cat_col: int,
+          val_cols: list[int], data_start: int, data_end: int,
+          anchor: str, colours: list[str] | None = None, width: int = 18, height: int = 12):
+    """Add a horizontal bar chart."""
+    chart = BarChart()
+    _style_chart(chart, title, width=width, height=height)
+    chart.type = 'bar'
+    chart.grouping = 'clustered'
+
+    cats = Reference(ws, min_col=cat_col, min_row=data_start + 1, max_row=data_end)
+    chart.set_categories(cats)
+
+    for i, vc in enumerate(val_cols):
+        data = Reference(ws, min_col=vc, min_row=data_start, max_row=data_end)
+        chart.add_data(data, titles_from_data=True)
+        if colours and i < len(colours):
+            chart.series[i].graphicalProperties.solidFill = colours[i]
+
+    chart.series[0].dLbls = DataLabelList()
+    chart.series[0].dLbls.showVal = True
+
+    ws.add_chart(chart, anchor)
+
+
+def _line(ws, title: str, cat_col: int, val_cols: list[int],
+          data_start: int, data_end: int, anchor: str,
+          colours: list[str] | None = None, width: int = 20, height: int = 12):
+    """Add a line chart."""
+    chart = LineChart()
+    _style_chart(chart, title, width=width, height=height)
+
+    cats = Reference(ws, min_col=cat_col, min_row=data_start + 1, max_row=data_end)
+    chart.set_categories(cats)
+
+    for i, vc in enumerate(val_cols):
+        data = Reference(ws, min_col=vc, min_row=data_start, max_row=data_end)
+        chart.add_data(data, titles_from_data=True)
+        if colours and i < len(colours):
+            chart.series[i].graphicalProperties.line.solidFill = colours[i]
+
+    ws.add_chart(chart, anchor)
 
 
 def build_charts_excel(filtered_df: pd.DataFrame, kpis: dict) -> io.BytesIO:
     """
-    Generate a single HTML report with all dashboard charts embedded.
+    Generate an Excel workbook with data tables + native Excel charts per section.
     Returns a BytesIO buffer ready for st.download_button.
-    (Named build_charts_excel for API compatibility — returns HTML bytes.)
     """
     departed_df = filtered_df[filtered_df['Employee Status'] == 'Departed']
-    sections = []
-    first = True
+    wb = Workbook()
+    wb.remove(wb.active)
 
-    def add(fig, title, height=420):
-        nonlocal first
-        sections.append(_chart_html(_style(fig, height), title, first))
-        first = False
+    # ── 1. KPI Summary ────────────────────────────────────────────────────
+    ws = wb.create_sheet('KPI Summary')
+    kpi_data = pd.DataFrame([
+        {'Metric': 'Total Employees', 'Value': kpis['total']},
+        {'Metric': 'Active Employees', 'Value': kpis['active']},
+        {'Metric': 'Departed Employees', 'Value': kpis['departed']},
+        {'Metric': 'Departure Rate %', 'Value': round(kpis['attrition_rate'], 1)},
+        {'Metric': 'Retention Rate %', 'Value': round(kpis['retention_rate'], 1)},
+        {'Metric': 'Avg Tenure (Months)', 'Value': round(kpis['avg_tenure'], 1)},
+        {'Metric': 'Avg Age', 'Value': round(kpis['avg_age'], 0) if not pd.isna(kpis['avg_age']) else 'N/A'},
+        {'Metric': 'Gender Ratio (M:F)', 'Value': kpis['gender_ratio']},
+    ])
+    _add_title(ws, 'Key Performance Indicators')
+    _write_table(ws, kpi_data, start_row=3)
 
-    # ── 1. Gender Distribution ────────────────────────────────────────────
-    gender_counts = filtered_df['Gender'].value_counts().reset_index()
-    gender_counts.columns = ['Gender', 'Count']
-    fig = px.pie(gender_counts, values='Count', names='Gender',
-                 color_discrete_sequence=['#7C3AED', '#D946EF'], hole=0.62)
-    fig.update_traces(textinfo='percent+label', textfont_size=12, textfont_color='#E2E8F0',
-                      marker=dict(line=dict(color='#0D0E1A', width=3)))
-    add(fig, 'Gender Distribution')
+    # ── 2. Gender Distribution ────────────────────────────────────────────
+    ws = wb.create_sheet('Gender Distribution')
+    gender_df = filtered_df['Gender'].value_counts().reset_index()
+    gender_df.columns = ['Gender', 'Count']
+    _add_title(ws, 'Gender Distribution')
+    end = _write_table(ws, gender_df, start_row=3)
+    _pie(ws, gender_df, 'Gender Distribution', cat_col=1, val_col=2,
+         data_start=3, data_end=end - 1, anchor='D3')
 
-    # ── 2. Employment Status ──────────────────────────────────────────────
-    status_counts = filtered_df['Employee Status'].value_counts().reset_index()
-    status_counts.columns = ['Status', 'Count']
-    fig = px.pie(status_counts, values='Count', names='Status',
-                 color_discrete_sequence=['#06B6D4', '#EF4444'], hole=0.62)
-    fig.update_traces(textinfo='percent+label', textfont_size=12, textfont_color='#E2E8F0',
-                      marker=dict(line=dict(color='#0D0E1A', width=3)))
-    add(fig, 'Employment Status')
+    # ── 3. Employment Status ──────────────────────────────────────────────
+    ws = wb.create_sheet('Employment Status')
+    status_df = filtered_df['Employee Status'].value_counts().reset_index()
+    status_df.columns = ['Status', 'Count']
+    _add_title(ws, 'Employment Status')
+    end = _write_table(ws, status_df, start_row=3)
+    _pie(ws, status_df, 'Employment Status', cat_col=1, val_col=2,
+         data_start=3, data_end=end - 1, anchor='D3')
 
-    # ── 3. Department Breakdown ───────────────────────────────────────────
-    dept_data = filtered_df.groupby(['Department', 'Employee Status']).size().reset_index(name='Count')
-    fig = px.bar(dept_data, x='Department', y='Count', color='Employee Status',
-                 color_discrete_map={'Active': '#06B6D4', 'Departed': '#EF4444'},
-                 barmode='group', text_auto=True)
-    fig.update_traces(textfont_size=9, textposition='outside', marker_line_width=0, opacity=0.9)
-    fig.update_layout(xaxis_tickangle=-35, bargap=0.28)
-    add(fig, 'Department Breakdown', 460)
-
-    # ── 4. Age Distribution ───────────────────────────────────────────────
-    if 'Age' in filtered_df.columns:
-        age_df = filtered_df[filtered_df['Age'] > 0]
-        if len(age_df) > 0:
-            fig = px.histogram(age_df, x='Age', nbins=20,
-                               color_discrete_sequence=['#7C3AED'], marginal='box', opacity=0.85)
-            add(fig, 'Age Distribution', 460)
+    # ── 4. Department Breakdown ───────────────────────────────────────────
+    ws = wb.create_sheet('Department Breakdown')
+    dept_status = filtered_df.groupby('Department')['Employee Status'].value_counts().unstack(fill_value=0).reset_index()
+    _add_title(ws, 'Department Breakdown (Active vs Departed)')
+    end = _write_table(ws, dept_status, start_row=3)
+    val_cols = [i + 2 for i in range(len(dept_status.columns) - 1)]
+    colours = [_CYAN, _RED]
+    _bar(ws, dept_status, 'Department Breakdown', cat_col=1, val_cols=val_cols,
+         data_start=3, data_end=end - 1, anchor=f'A{end + 1}', colours=colours, width=22)
 
     # ── 5. Exit Types ─────────────────────────────────────────────────────
     if len(departed_df) > 0:
-        exit_counts = departed_df['Exit Type'].value_counts().reset_index()
-        exit_counts.columns = ['Exit Type', 'Count']
-        fig = px.pie(exit_counts, values='Count', names='Exit Type',
-                     color_discrete_sequence=['#F59E0B', '#EF4444', '#A78BFA', '#06B6D4'], hole=0.62)
-        fig.update_traces(textinfo='percent+label', textfont_size=12, textfont_color='#E2E8F0',
-                          marker=dict(line=dict(color='#0D0E1A', width=3)))
-        add(fig, 'Exit Types')
+        ws = wb.create_sheet('Exit Types')
+        exit_df = departed_df['Exit Type'].value_counts().reset_index()
+        exit_df.columns = ['Exit Type', 'Count']
+        _add_title(ws, 'Exit Types')
+        end = _write_table(ws, exit_df, start_row=3)
+        _pie(ws, exit_df, 'Exit Types', cat_col=1, val_col=2,
+             data_start=3, data_end=end - 1, anchor='D3')
 
     # ── 6. Exit Reason Categories ─────────────────────────────────────────
     if len(departed_df) > 0 and 'Exit Reason Category' in departed_df.columns:
-        reason_counts = departed_df['Exit Reason Category'].value_counts().reset_index()
-        reason_counts.columns = ['Category', 'Count']
-        fig = px.bar(reason_counts, x='Count', y='Category', orientation='h',
-                     color='Count',
-                     color_continuous_scale=[[0, '#3B0764'], [0.5, '#7C3AED'], [1, '#D946EF']])
-        fig.update_layout(yaxis={'categoryorder': 'total ascending'}, coloraxis_showscale=False)
-        add(fig, 'Exit Reason Categories', 460)
+        ws = wb.create_sheet('Exit Reasons')
+        reason_df = departed_df['Exit Reason Category'].value_counts().reset_index()
+        reason_df.columns = ['Category', 'Count']
+        _add_title(ws, 'Exit Reason Categories')
+        end = _write_table(ws, reason_df, start_row=3)
+        _hbar(ws, reason_df, 'Exit Reason Categories', cat_col=1, val_cols=[2],
+              data_start=3, data_end=end - 1, anchor=f'D3',
+              colours=[_PURPLE], height=max(10, len(reason_df) * 1.5))
 
     # ── 7. Departure Rate by Department ──────────────────────────────────
     dept_attrition = filtered_df.groupby('Department').agg(
@@ -105,54 +243,44 @@ def build_charts_excel(filtered_df: pd.DataFrame, kpis: dict) -> io.BytesIO:
     dept_attrition['Departure Rate %'] = (
         dept_attrition['Departed'] / dept_attrition['Total'] * 100
     ).round(1)
-    fig = px.bar(dept_attrition.sort_values('Departure Rate %', ascending=False),
-                 x='Department', y='Departure Rate %',
-                 color='Departure Rate %',
-                 color_continuous_scale=[[0, '#064E3B'], [0.5, '#7C3AED'], [1, '#EF4444']],
-                 text='Departure Rate %')
-    fig.update_traces(texttemplate='%{text:.1f}%', textposition='outside',
-                      marker_line_width=0, opacity=0.92)
-    fig.update_layout(xaxis_tickangle=-35, coloraxis_showscale=False)
-    add(fig, 'Departure Rate by Department', 460)
+    dept_attrition = dept_attrition.sort_values('Departure Rate %', ascending=False)
 
-    # ── 8. Tenure Distribution ────────────────────────────────────────────
+    ws = wb.create_sheet('Dept Departure Rate')
+    _add_title(ws, 'Departure Rate by Department')
+    end = _write_table(ws, dept_attrition, start_row=3)
+    _bar(ws, dept_attrition, 'Departure Rate %', cat_col=1, val_cols=[5],
+         data_start=3, data_end=end - 1, anchor=f'A{end + 1}', colours=[_RED], width=22)
+
+    # ── 8. Tenure by Department ───────────────────────────────────────────
     if 'Tenure (Months)' in filtered_df.columns:
-        fig = px.histogram(filtered_df, x='Tenure (Months)', nbins=30,
-                           color='Employee Status',
-                           color_discrete_map={'Active': '#10B981', 'Departed': '#EF4444'},
-                           marginal='box')
-        add(fig, 'Tenure Distribution')
-
         tenure_dept = (
             filtered_df.groupby('Department')['Tenure (Months)']
             .agg(['mean', 'median', 'count']).round(1)
             .rename(columns={'mean': 'Avg Tenure', 'median': 'Median Tenure', 'count': 'Count'})
             .reset_index().sort_values('Avg Tenure', ascending=False)
         )
-        fig = px.bar(tenure_dept, x='Department', y='Avg Tenure',
-                     color='Avg Tenure', color_continuous_scale='Blues',
-                     text='Avg Tenure', hover_data=['Median Tenure', 'Count'])
-        fig.update_traces(texttemplate='%{text:.1f}', textposition='outside')
-        fig.update_layout(xaxis_tickangle=-45)
-        add(fig, 'Average Tenure by Department', 460)
+        ws = wb.create_sheet('Tenure by Dept')
+        _add_title(ws, 'Average Tenure by Department')
+        end = _write_table(ws, tenure_dept, start_row=3)
+        _bar(ws, tenure_dept, 'Avg Tenure (Months)', cat_col=1, val_cols=[2, 3],
+             data_start=3, data_end=end - 1, anchor=f'A{end + 1}',
+             colours=[_CYAN, _AMBER], width=22)
 
     # ── 9. Time-to-Departure ──────────────────────────────────────────────
     if len(departed_df) > 0 and 'Tenure (Months)' in departed_df.columns:
-        ttd_dept = (
+        ttd = (
             departed_df.groupby('Department')['Tenure (Months)']
             .agg(Avg='mean', Median='median', Count='count')
             .round(1).reset_index().sort_values('Avg')
         )
-        fig = px.bar(ttd_dept, x='Avg', y='Department', orientation='h',
-                     text='Avg', color='Avg',
-                     color_continuous_scale=[[0, '#EF4444'], [0.5, '#F59E0B'], [1, '#10B981']])
-        fig.update_traces(texttemplate='%{text:.1f} mo', textposition='outside',
-                          textfont=dict(color='#CBD5E1', size=11), marker_line_width=0)
-        fig.update_layout(coloraxis_showscale=False,
-                          xaxis=dict(title='Avg Months Before Departure'))
-        add(fig, 'Avg Tenure at Exit (Time-to-Departure)', max(380, len(ttd_dept) * 40))
+        ws = wb.create_sheet('Time to Departure')
+        _add_title(ws, 'Average Tenure at Exit by Department')
+        end = _write_table(ws, ttd, start_row=3)
+        _hbar(ws, ttd, 'Avg Months Before Departure', cat_col=1, val_cols=[2],
+              data_start=3, data_end=end - 1, anchor='F3',
+              colours=[_GREEN], height=max(10, len(ttd) * 1.5))
 
-    # ── 10. Early Departure Rate by Department ────────────────────────────
+    # ── 10. Early Departure Rate ──────────────────────────────────────────
     if len(departed_df) > 0 and 'Tenure (Months)' in departed_df.columns:
         dept_stats = departed_df.groupby('Department').agg(
             Total_Departed=('Tenure (Months)', 'count'),
@@ -161,13 +289,14 @@ def build_charts_excel(filtered_df: pd.DataFrame, kpis: dict) -> io.BytesIO:
         dept_stats['Early Departure Rate %'] = (
             dept_stats['Early_Departed'] / dept_stats['Total_Departed'] * 100
         ).round(1)
-        fig = px.bar(dept_stats.sort_values('Early Departure Rate %', ascending=False),
-                     x='Department', y='Early Departure Rate %',
-                     text='Early Departure Rate %', color='Early Departure Rate %',
-                     color_continuous_scale=[[0, '#064E3B'], [0.5, '#F59E0B'], [1, '#EF4444']])
-        fig.update_traces(texttemplate='%{text:.1f}%', textposition='outside', marker_line_width=0)
-        fig.update_layout(coloraxis_showscale=False, xaxis_tickangle=-35)
-        add(fig, 'Early Departure Rate by Dept (Left ≤3 Months)', 460)
+        dept_stats = dept_stats.sort_values('Early Departure Rate %', ascending=False)
+
+        ws = wb.create_sheet('Early Departure Rate')
+        _add_title(ws, 'Early Departure Rate (Left ≤3 Months)')
+        end = _write_table(ws, dept_stats, start_row=3)
+        _bar(ws, dept_stats, 'Early Departure Rate %', cat_col=1, val_cols=[4],
+             data_start=3, data_end=end - 1, anchor=f'A{end + 1}',
+             colours=[_AMBER], width=22)
 
     # ── 11. Monthly Hiring vs Departures ─────────────────────────────────
     if 'Join Month' in filtered_df.columns:
@@ -183,96 +312,48 @@ def build_charts_excel(filtered_df: pd.DataFrame, kpis: dict) -> io.BytesIO:
         combined['Exits'] = combined['Month'].map(exits).fillna(0).astype(int)
         combined['Net'] = combined['Hires'] - combined['Exits']
 
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(x=combined['Month'], y=combined['Hires'],
-                                 name='Hires', mode='lines+markers',
-                                 line=dict(color='#10B981', width=2.5),
-                                 fill='tozeroy', fillcolor='rgba(16,185,129,0.07)'))
-        fig.add_trace(go.Scatter(x=combined['Month'], y=combined['Exits'],
-                                 name='Departures', mode='lines+markers',
-                                 line=dict(color='#EF4444', width=2.5),
-                                 fill='tozeroy', fillcolor='rgba(239,68,68,0.07)'))
-        fig.update_layout(xaxis=dict(tickangle=-45), legend=dict(orientation='h', y=1.08),
-                          hovermode='x unified')
-        add(fig, 'Monthly Hiring vs Departures', 460)
+        ws = wb.create_sheet('Hiring vs Departures')
+        _add_title(ws, 'Monthly Hiring vs Departures')
+        end = _write_table(ws, combined, start_row=3)
+        _line(ws, 'Hiring vs Departures', cat_col=1, val_cols=[2, 3],
+              data_start=3, data_end=end - 1, anchor=f'A{end + 1}',
+              colours=[_GREEN, _RED], width=24, height=14)
 
     # ── 12. Headcount by Year ─────────────────────────────────────────────
     if 'Join Year' in filtered_df.columns:
         headcount = (
             filtered_df[filtered_df['Join Year'] > 2000]
-            .groupby(['Join Year', 'Employee Status']).size().reset_index(name='Count')
+            .groupby('Join Year')['Employee Status'].value_counts()
+            .unstack(fill_value=0).reset_index()
         )
         if len(headcount) > 0:
-            fig = px.bar(headcount, x='Join Year', y='Count', color='Employee Status',
-                         color_discrete_map={'Active': '#10B981', 'Departed': '#EF4444'},
-                         barmode='stack')
-            add(fig, 'Headcount by Year')
+            ws = wb.create_sheet('Headcount by Year')
+            _add_title(ws, 'Headcount Summary by Year')
+            end = _write_table(ws, headcount, start_row=3)
+            val_cols = [i + 2 for i in range(len(headcount.columns) - 1)]
+            chart = BarChart()
+            _style_chart(chart, 'Headcount by Year', width=22)
+            chart.grouping = 'stacked'
+            cats = Reference(ws, min_col=1, min_row=4, max_row=end - 1)
+            chart.set_categories(cats)
+            for i, vc in enumerate(val_cols):
+                data = Reference(ws, min_col=vc, min_row=3, max_row=end - 1)
+                chart.add_data(data, titles_from_data=True)
+                chart.series[i].graphicalProperties.solidFill = [_GREEN, _RED][i % 2]
+            ws.add_chart(chart, f'A{end + 1}')
 
     # ── 13. Vendor Analysis ───────────────────────────────────────────────
     if 'Vendor' in filtered_df.columns:
-        vendor_counts = filtered_df['Vendor'].value_counts().reset_index()
-        vendor_counts.columns = ['Vendor', 'Count']
-        fig = px.pie(vendor_counts, values='Count', names='Vendor',
-                     color_discrete_sequence=_NEON, hole=0.4)
-        fig.update_traces(textinfo='percent+value', textfont_size=13)
-        add(fig, 'Vendor / Source Analysis')
+        vendor_df = filtered_df['Vendor'].value_counts().reset_index()
+        vendor_df.columns = ['Vendor', 'Count']
+        ws = wb.create_sheet('Vendor Analysis')
+        _add_title(ws, 'Vendor / Source Analysis')
+        end = _write_table(ws, vendor_df, start_row=3)
+        _pie(ws, vendor_df, 'Vendor Distribution', cat_col=1, val_col=2,
+             data_start=3, data_end=end - 1, anchor='D3')
 
-    # ── Assemble HTML ─────────────────────────────────────────────────────
-    generated = datetime.now().strftime('%Y-%m-%d %H:%M')
-    total = len(filtered_df)
-    html = f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>HR Analytics — Chart Report</title>
-<style>
-  * {{ box-sizing: border-box; margin: 0; padding: 0; }}
-  body {{
-    background: #0D0E1A;
-    font-family: 'Segoe UI', system-ui, sans-serif;
-    color: #F1F5F9;
-    padding: 2rem;
-  }}
-  .report-header {{
-    border-bottom: 1px solid rgba(255,255,255,0.08);
-    padding-bottom: 1.5rem;
-    margin-bottom: 2rem;
-  }}
-  .report-header h1 {{
-    font-size: 1.8rem;
-    font-weight: 800;
-    background: linear-gradient(135deg, #A78BFA, #67E8F9);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-  }}
-  .report-header p {{ color: #475569; font-size: 0.85rem; margin-top: 0.4rem; }}
-  .chart-block {{
-    background: #161728;
-    border: 1px solid rgba(255,255,255,0.07);
-    border-radius: 16px;
-    padding: 1.5rem;
-    margin-bottom: 1.5rem;
-  }}
-  .chart-block h2 {{
-    font-size: 0.95rem;
-    font-weight: 700;
-    color: #E2E8F0;
-    margin-bottom: 1rem;
-    padding-left: 10px;
-    border-left: 3px solid #7C3AED;
-  }}
-</style>
-</head>
-<body>
-<div class="report-header">
-  <h1>HR Analytics — Chart Report</h1>
-  <p>Generated: {generated} &nbsp;|&nbsp; {total:,} employees in current filter</p>
-</div>
-{''.join(sections)}
-</body>
-</html>"""
-
-    buffer = io.BytesIO(html.encode('utf-8'))
+    # ── Save ──────────────────────────────────────────────────────────────
+    buffer = io.BytesIO()
+    wb.save(buffer)
     buffer.seek(0)
     return buffer
