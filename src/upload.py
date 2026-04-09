@@ -46,11 +46,11 @@ def prepare_upload(df: pd.DataFrame, mapping: dict[str, str | None]) -> pd.DataF
         if pd.api.types.is_datetime64_any_dtype(df[col]):
             df[col] = df[col].dt.strftime("%Y-%m-%d").where(df[col].notna(), None)
         else:
-            # Handle object columns containing Python datetime/date objects
+            # Handle object columns containing Python datetime/date/time objects
             df[col] = df[col].apply(
                 lambda v: v.strftime("%Y-%m-%d")
                 if isinstance(v, (datetime.datetime, datetime.date))
-                else v
+                else (v.strftime("%H:%M:%S") if isinstance(v, datetime.time) else v)
             )
     # Replace NaN/NaT with None for JSON compatibility
     df = df.where(pd.notnull(df), None)
