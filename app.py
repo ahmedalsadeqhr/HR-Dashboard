@@ -7,7 +7,8 @@ from pathlib import Path
 from src.config import COLORS, COLOR_SEQUENCE, CHART_CONFIG, REQUIRED_COLUMNS, detect_name_column
 from src.data_processing import load_from_db, calculate_kpis
 from src.db import fetch_last_upload
-from src.utils import delta, export_charts_excel
+from src.utils import delta
+from src.chart_export import build_charts_excel
 from src.pages import analysis, employee_data
 
 # ===================== PAGE CONFIG =====================
@@ -774,7 +775,7 @@ st.markdown("---")
 
 # ===================== DOWNLOAD CHARTS =====================
 from datetime import date as _date
-_excel_buf = export_charts_excel(filtered_df, kpis)
+_excel_buf = build_charts_excel(filtered_df, kpis)
 st.download_button(
     label="⬇ Download All Charts (Excel)",
     data=_excel_buf,
