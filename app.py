@@ -7,7 +7,7 @@ from pathlib import Path
 from src.config import COLORS, COLOR_SEQUENCE, CHART_CONFIG, REQUIRED_COLUMNS, detect_name_column
 from src.data_processing import load_from_db, calculate_kpis
 from src.db import fetch_last_upload
-from src.utils import delta
+from src.utils import delta, export_charts_excel
 from src.pages import analysis, employee_data
 
 # ===================== PAGE CONFIG =====================
@@ -769,6 +769,18 @@ row2[1].metric("Avg Tenure (Mo)", f"{kpis['avg_tenure']:.1f}",
                delta=delta(kpis['avg_tenure'], kpis_all['avg_tenure'], '', len(filtered_df), len(df)))
 row2[2].metric("Average Age", f"{kpis['avg_age']:.0f}" if not pd.isna(kpis['avg_age']) else "N/A")
 row2[3].metric("Gender Ratio (M:F)", kpis['gender_ratio'])
+
+st.markdown("---")
+
+# ===================== DOWNLOAD CHARTS =====================
+from datetime import date as _date
+_excel_buf = export_charts_excel(filtered_df, kpis)
+st.download_button(
+    label="⬇ Download All Charts (Excel)",
+    data=_excel_buf,
+    file_name=f"hr_dashboard_charts_{_date.today()}.xlsx",
+    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+)
 
 st.markdown("---")
 

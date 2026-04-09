@@ -109,3 +109,140 @@ def export_excel(filtered_df):
     filtered_df.to_excel(excel_buffer, index=False, engine='openpyxl')
     excel_buffer.seek(0)
     return excel_buffer
+
+
+def export_charts_excel(filtered_df, kpis):
+    """
+    Export the data behind every dashboard chart as a multi-sheet Excel file.
+    Each sheet corresponds to one chart/section.
+    """
+    departed_df = filtered_df[filtered_df['Employee Status'] == 'Departed']
+    buffer = io.BytesIO()
+
+    with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+
+        # ── Overview ──────────────────────────────────────────────────────
+        gender_counts = filtered_df['Gender'].value_counts().reset_index()
+        gender_counts.columns = ['Gender', 'Count']
+        gender_counts.to_excel(writer, sheet_name='Gender Distribution', index=False)
+
+        status_counts = filtered_df['Employee Status'].value_counts().reset_index()
+        status_counts.columns = ['Status', 'Count']
+        status_counts.to_excel(writer, sheet_name='Employment Status', index=False)
+
+        dept_data = (
+            filtered_df.groupby(['Department', 'Employee Status'])
+            .size().reset_index(name='Count')
+        )
+        dept_data.to_excel(writer, sheet_name='Department Breakdown', index=False)
+
+        if 'Age' in filtered_df.columns:
+            age_df = filtered_df[filtered_df['Age'] > 0][['Age', 'Employee Status']]
+            age_df.to_excel(writer, sheet_name='Age Distribution', index=False)
+
+        # ── Attrition ────────────────────────────────────────────────────
+        if len(departed_df) > 0:
+            exit_counts = departed_df['Exit Type'].value_counts().reset_index()
+            exit_counts.columns = ['Exit Type', 'Count']
+            exit_counts.to_excel(writer, sheet_name='Exit Types', index=False)
+
+            if 'Exit Reason Category' in departed_df.columns:
+                reason_counts = departed_df['Exit Reason Category'].value_counts().reset_index()
+                reason_counts.columns = ['Category', 'Count']
+                reason_counts.to_excel(writer, sheet_name='Exit Reasons', index=False)
+
+            dept_attrition = filtered_df.groupby('Department').agg(
+                Active=('Employee Status', lambda x: (x == 'Active').sum()),
+                Departed=('Employee Status', lambda x: (x == 'Departed').sum()),
+                Total=('Employee Status', 'count')
+            ).reset_index()
+            dept_attrition['Departure Rate %'] = (
+                dept_attrition['Departed'] / dept_attrition['Total'] * 100
+            ).round(1)
+            dept_attrition.sort_values('Departure Rate %', ascending=False).to_excel(
+                writer, sheet_name='Dept Departure Rate', index=False
+            )
+
+        # ── Tenure & Retention ───────────────────────────────────────────
+        if 'Tenure (Months)' in filtered_df.columns:
+            tenure_dept = (
+                filtered_df.groupby('Department')['Tenure (Months)']
+                .agg(['mean', 'median', 'count']).round(1)
+                .rename(columns={'mean': 'Avg Tenure', 'median': 'Median Tenure', 'count': 'Count'})
+                .reset_index()
+                .sort_values('Avg Tenure', ascending=False)
+            )
+            tenure_dept.to_excel(writer, sheet_name='Tenure by Department', index=False)
+
+            if len(departed_df) > 0:
+                ttd_dept = (
+                    departed_df.groupby('Department')['Tenure (Months)']
+                    .agg(Avg='mean', Median='median', Count='count')
+                    .round(1).reset_index().sort_values('Avg')
+                )
+                ttd_dept.to_excel(writer, sheet_name='Time to Departure', index=False)
+
+                dept_stats = departed_df.groupby('Department').agg(
+                    Total_Departed=('Tenure (Months)', 'count'),
+                    Early_Departed=('Tenure (Months)', lambda x: (x <= 3).sum()),
+                ).reset_index()
+                dept_stats['Early Departure Rate %'] = (
+                    dept_stats['Early_Departed'] / dept_stats['Total_Departed'] * 100
+                ).round(1)
+                dept_stats.to_excel(writer, sheet_name='Early Departure Rate', index=False)
+
+        # ── Workforce ────────────────────────────────────────────────────
+        if 'Vendor' in filtered_df.columns:
+            vendor_attrition = filtered_df.groupby('Vendor').agg(
+                Total=('Employee Status', 'count'),
+                Departed=('Employee Status', lambda x: (x == 'Departed').sum())
+            ).reset_index()
+            vendor_attrition['Departure Rate %'] = (
+                vendor_attrition['Departed'] / vendor_attrition['Total'] * 100
+            ).round(1)
+            vendor_attrition.to_excel(writer, sheet_name='Vendor Analysis', index=False)
+
+        # ── Trends ───────────────────────────────────────────────────────
+        if 'Join Month' in filtered_df.columns:
+            hiring = filtered_df.groupby('Join Month').size().rename('Hires').reset_index()
+            hiring.columns = ['Month', 'Hires']
+            if len(departed_df) > 0 and 'Exit Month' in departed_df.columns:
+                exits = departed_df.groupby('Exit Month').size().rename('Exits').reset_index()
+                exits.columns = ['Month', 'Exits']
+                trend = hiring.merge(exits, on='Month', how='outer').fillna(0).sort_values('Month')
+                trend['Net'] = trend['Hires'].astype(int) - trend['Exits'].astype(int)
+            else:
+                trend = hiring.sort_values('Month')
+            trend.to_excel(writer, sheet_name='Monthly Hiring vs Departures', index=False)
+
+        if 'Join Year' in filtered_df.columns:
+            headcount = (
+                filtered_df.groupby(['Join Year', 'Employee Status'])
+                .size().unstack(fill_value=0).reset_index()
+            )
+            headcount[headcount['Join Year'] > 2000].to_excel(
+                writer, sheet_name='Headcount by Year', index=False
+            )
+
+        # ── KPI Summary ──────────────────────────────────────────────────
+        kpi_summary = pd.DataFrame([{
+            'Metric': 'Total Employees', 'Value': kpis['total'],
+        }, {
+            'Metric': 'Active Employees', 'Value': kpis['active'],
+        }, {
+            'Metric': 'Departed Employees', 'Value': kpis['departed'],
+        }, {
+            'Metric': 'Departure Rate %', 'Value': round(kpis['attrition_rate'], 1),
+        }, {
+            'Metric': 'Retention Rate %', 'Value': round(kpis['retention_rate'], 1),
+        }, {
+            'Metric': 'Avg Tenure (Months)', 'Value': round(kpis['avg_tenure'], 1),
+        }, {
+            'Metric': 'Avg Age', 'Value': round(kpis['avg_age'], 0) if not pd.isna(kpis['avg_age']) else 'N/A',
+        }, {
+            'Metric': 'Gender Ratio (M:F)', 'Value': kpis['gender_ratio'],
+        }])
+        kpi_summary.to_excel(writer, sheet_name='KPI Summary', index=False)
+
+    buffer.seek(0)
+    return buffer
