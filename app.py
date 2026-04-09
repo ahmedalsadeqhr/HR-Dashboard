@@ -777,10 +777,10 @@ st.markdown("---")
 from datetime import date as _date
 _excel_buf = build_charts_excel(filtered_df, kpis)
 st.download_button(
-    label="⬇ Download All Charts (Excel)",
+    label="⬇ Download All Charts (HTML)",
     data=_excel_buf,
-    file_name=f"hr_dashboard_charts_{_date.today()}.xlsx",
-    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    file_name=f"hr_dashboard_charts_{_date.today()}.html",
+    mime="text/html",
 )
 
 st.markdown("---")
