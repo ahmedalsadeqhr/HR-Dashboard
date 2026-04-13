@@ -6,13 +6,35 @@ _BATCH_SIZE = 500  # Supabase insert limit per request
 
 
 def fetch_employees() -> pd.DataFrame:
-    """Fetch all rows from employees table, unpacking the JSONB data column."""
+    """Fetch all rows from employees table, unpacking the JSONB data column.
+
+    Supabase returns at most 1000 rows per request by default, so we paginate
+    using .range() until we get a partial page (or empty page), which signals
+    we've fetched everything.
+    """
     client = get_supabase_client()
-    result = client.table("employees").select("data").execute()
-    rows = result.data
-    if not rows:
+    all_rows: list[dict] = []
+    page_size = 1000
+    offset = 0
+
+    while True:
+        result = (
+            client.table("employees")
+            .select("data")
+            .range(offset, offset + page_size - 1)
+            .execute()
+        )
+        batch = result.data
+        if not batch:
+            break
+        all_rows.extend(batch)
+        if len(batch) < page_size:
+            break
+        offset += page_size
+
+    if not all_rows:
         return pd.DataFrame()
-    return pd.DataFrame([r["data"] for r in rows])
+    return pd.DataFrame([r["data"] for r in all_rows])
 
 
 def fetch_last_upload() -> dict | None:
