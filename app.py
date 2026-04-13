@@ -642,39 +642,33 @@ status_filter = st.sidebar.selectbox("Employee Status", ["All", "Active", "Depar
 
 st.sidebar.markdown("---")
 
-# ---- Join Date: two separate pickers ----
+# ---- Join Date: two separate pickers (blank = no filter) ----
 join_start = join_end = None
 if 'Join Date' in df.columns:
-    jmin = df['Join Date'].dropna().min().date()
-    jmax = df['Join Date'].dropna().max().date()
     st.sidebar.markdown("**Join Date — From**")
     join_start = st.sidebar.date_input(
-        "join_from", value=jmin, min_value=jmin, max_value=jmax,
+        "join_from", value=None,
         label_visibility="collapsed", key="join_start",
     )
     st.sidebar.markdown("**Join Date — To**")
     join_end = st.sidebar.date_input(
-        "join_to", value=jmax, min_value=jmin, max_value=jmax,
+        "join_to", value=None,
         label_visibility="collapsed", key="join_end",
     )
 
-# ---- Exit Date: two separate pickers ----
+# ---- Exit Date: two separate pickers (blank = no filter) ----
 exit_start = exit_end = None
 if 'Exit Date' in df.columns:
-    exit_dates = df['Exit Date'].dropna()
-    if len(exit_dates) > 0:
-        emin = exit_dates.min().date()
-        emax = exit_dates.max().date()
-        st.sidebar.markdown("**Exit Date — From**")
-        exit_start = st.sidebar.date_input(
-            "exit_from", value=emin, min_value=emin, max_value=emax,
-            label_visibility="collapsed", key="exit_start",
-        )
-        st.sidebar.markdown("**Exit Date — To**")
-        exit_end = st.sidebar.date_input(
-            "exit_to", value=emax, min_value=emin, max_value=emax,
-            label_visibility="collapsed", key="exit_end",
-        )
+    st.sidebar.markdown("**Exit Date — From**")
+    exit_start = st.sidebar.date_input(
+        "exit_from", value=None,
+        label_visibility="collapsed", key="exit_start",
+    )
+    st.sidebar.markdown("**Exit Date — To**")
+    exit_end = st.sidebar.date_input(
+        "exit_to", value=None,
+        label_visibility="collapsed", key="exit_end",
+    )
 
 all_depts = sorted(df['Department'].dropna().unique().tolist())
 dept_filter = st.sidebar.multiselect("Department", all_depts, default=all_depts)
@@ -700,29 +694,30 @@ exit_type_filter = st.sidebar.selectbox(
 # Apply filters
 filtered_df = df.copy()
 
-if join_start and join_end and 'Join Date' in filtered_df.columns:
-    if join_start <= join_end:
-        filtered_df = filtered_df[
-            (filtered_df['Join Date'].dt.date >= join_start) &
-            (filtered_df['Join Date'].dt.date <= join_end)
-        ]
-    else:
+if 'Join Date' in filtered_df.columns and (join_start or join_end):
+    if join_start and join_end and join_start > join_end:
         st.sidebar.warning("Join 'From' date must be before 'To' date.")
+    else:
+        if join_start:
+            filtered_df = filtered_df[filtered_df['Join Date'].dt.date >= join_start]
+        if join_end:
+            filtered_df = filtered_df[filtered_df['Join Date'].dt.date <= join_end]
 
-if exit_start and exit_end and 'Exit Date' in filtered_df.columns:
-    if exit_start <= exit_end:
-        exit_filter_active = (exit_start != emin) or (exit_end != emax)
-        if exit_filter_active:
-            # Only filter rows that have an exit date; active employees (no exit date) are unaffected
+if 'Exit Date' in filtered_df.columns and (exit_start or exit_end):
+    if exit_start and exit_end and exit_start > exit_end:
+        st.sidebar.warning("Exit 'From' date must be before 'To' date.")
+    else:
+        # Active employees (no exit date) are preserved when filtering by exit date
+        if exit_start:
             filtered_df = filtered_df[
                 filtered_df['Exit Date'].isna() |
-                (
-                    (filtered_df['Exit Date'].dt.date >= exit_start) &
-                    (filtered_df['Exit Date'].dt.date <= exit_end)
-                )
+                (filtered_df['Exit Date'].dt.date >= exit_start)
             ]
-    else:
-        st.sidebar.warning("Exit 'From' date must be before 'To' date.")
+        if exit_end:
+            filtered_df = filtered_df[
+                filtered_df['Exit Date'].isna() |
+                (filtered_df['Exit Date'].dt.date <= exit_end)
+            ]
 
 if dept_filter:
     filtered_df = filtered_df[filtered_df['Department'].isin(dept_filter)]
