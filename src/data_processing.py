@@ -4,6 +4,71 @@ import streamlit as st
 from datetime import datetime
 from src.db import fetch_employees
 
+# ── Column maps for the two new source files ──────────────────────────────────
+# Both files export row 0 as English display-name headers; real data starts row 1.
+
+_ACTIVE_COLS = {
+    'JobNumber':                         'Employee ID',
+    'UserID-ExportName':                 'Full Name',
+    'UserID-Email':                      'Email',
+    'extcrmzh_615692_156087692':         'CRM Account',
+    'parent_Gender':                     'Gender',
+    'OIdDepartment':                     'Department',
+    'OIdJobPost':                        'Position',
+    'EmployType':                        'Employment Type',
+    'EmploymentForm':                    'Employment Form',
+    'OIdJobLevel':                       'Job Level',
+    'POIdEmpAdmin-ExportName':           'Line Manager',
+    'EntryDate':                         'Join Date',
+    'ProbationStopDate':                 'Probation Period End Date',
+    'RegularizationDate':                'Regularization Date',
+    'parent_Nationality':                'Nationality',
+    'parent_Birthday':                   'Birthday Date',
+    'LookupPrefix_UserID_TerminateDate': 'Contract End Date',
+}
+
+_LEAVERS_COLS = {
+    'JobNumber':                  'Employee ID',
+    'UserID-ExportName':          'Full Name',
+    'UserID-Email':               'Email',
+    'extcrmzh_615692_156087692':  'CRM Account',
+    'EntryDate':                  'Join Date',
+    'TransitionTypeOID':          'Exit Type',
+    'ChangeReason':               'Exit Reason Category',
+    'LastWorkDate':               'Exit Date',
+    'OIdDepartment':              'Department',
+    'OIdJobPosition':             'Position',
+    'OIdJobLevel':                'Job Level',
+}
+
+
+def merge_two_sources(active_raw: pd.DataFrame, leavers_raw: pd.DataFrame) -> pd.DataFrame:
+    """Normalise and merge the Active Employees and Offboarding files into one DataFrame.
+
+    Both files have row 0 as English display-name headers — skipped here.
+    Leavers with ApprovalStatus != 'Effective' are excluded.
+    """
+    # Skip display-name header row
+    active = active_raw.iloc[1:].reset_index(drop=True).copy()
+    leavers = leavers_raw.iloc[1:].reset_index(drop=True).copy()
+
+    # Keep only effective leavers
+    if 'ApprovalStatus' in leavers.columns:
+        leavers = leavers[leavers['ApprovalStatus'] == 'Effective'].reset_index(drop=True)
+
+    # Select and rename active columns
+    active_keep = {src: tgt for src, tgt in _ACTIVE_COLS.items() if src in active.columns}
+    active = active[list(active_keep.keys())].rename(columns=active_keep)
+    active['Employee Status'] = 'Active'
+
+    # Select and rename leavers columns
+    leavers_keep = {src: tgt for src, tgt in _LEAVERS_COLS.items() if src in leavers.columns}
+    leavers = leavers[list(leavers_keep.keys())].rename(columns=leavers_keep)
+    leavers['Employee Status'] = 'Departed'
+
+    combined = pd.concat([active, leavers], ignore_index=True, sort=False)
+    return combined
+
 
 @st.cache_data
 def load_excel(file_path_or_buffer):
@@ -23,27 +88,27 @@ def load_from_db() -> pd.DataFrame:
 
 def process_data(df):
     """Process raw HR data: clean columns, parse dates, calculate derived fields."""
-    # Ensure all column names are strings, then clean
     df.columns = [str(c) for c in df.columns]
     df.columns = df.columns.str.replace('\n', ' ').str.replace('\r', ' ').str.replace('  ', ' ').str.strip()
 
-    # Rename columns for consistency
+    # Backward-compat renames for old Master-sheet column names
     rename_map = {
-        'Join Date (yyyy/mm/dd)': 'Join Date',
-        'Exit Date yyyy/mm/dd': 'Exit Date',
+        'Join Date (yyyy/mm/dd)':  'Join Date',
+        'Exit Date yyyy/mm/dd':    'Exit Date',
         'Position (After Joining)': 'Position After Joining',
     }
     df = df.rename(columns={k: v for k, v in rename_map.items() if k in df.columns})
 
     # Parse date columns
-    date_cols = ['Join Date', 'Exit Date', 'Birthday Date', 'Probation Period End Date']
+    date_cols = ['Join Date', 'Exit Date', 'Birthday Date', 'Probation Period End Date',
+                 'Regularization Date', 'Contract End Date']
     for col in date_cols:
         if col in df.columns:
             df[col] = pd.to_datetime(df[col], errors='coerce')
 
     today = pd.Timestamp(datetime.now())
 
-    # Age
+    # Age — recalculate from Birthday Date when available
     if 'Birthday Date' in df.columns:
         df['Age'] = ((today - df['Birthday Date']).dt.days / 365.25).fillna(0).astype(int)
 
@@ -57,7 +122,7 @@ def process_data(df):
             )
         else:
             df['Tenure (Months)'] = ((today - df['Join Date']).dt.days / 30.44).fillna(0)
-        df['Tenure (Months)'] = df['Tenure (Months)'].round(1)
+        df['Tenure (Months)'] = df['Tenure (Months)'].clip(lower=0).round(1)
 
     # Time periods
     if 'Join Date' in df.columns:
@@ -89,13 +154,14 @@ def process_data(df):
             )
         )
 
-    # Employment type cleanup
-    if 'Type' in df.columns:
-        df['Employment Type'] = df['Type'].fillna('Unknown')
-    else:
-        df['Employment Type'] = 'Unknown'
+    # Employment type cleanup (handles both old and new schema)
+    if 'Employment Type' not in df.columns:
+        if 'Type' in df.columns:
+            df['Employment Type'] = df['Type'].fillna('Unknown')
+        else:
+            df['Employment Type'] = 'Unknown'
 
-    # Vendor cleanup
+    # Vendor cleanup (old schema only)
     if 'Vendor' in df.columns:
         df['Vendor'] = df['Vendor'].fillna('Direct Hire')
 
@@ -103,7 +169,7 @@ def process_data(df):
     if 'Nationality' in df.columns:
         df['Nationality'] = df['Nationality'].fillna('Unknown')
 
-    # Exit Reason List cleanup
+    # Exit ReasonList cleanup (old schema)
     if 'Exit ReasonList' in df.columns:
         df['Exit ReasonList'] = df['Exit ReasonList'].fillna('')
 
@@ -124,15 +190,25 @@ def calculate_kpis(df):
 
     retention_rate = (active / total * 100) if total > 0 else 0
 
-    contractor_ratio = 0
+    # Contractor ratio — handles both old schema (Employment Type with Freelancer/Contract)
+    # and new schema (Employment Form with Outsourced)
+    contractor_mask = pd.Series(False, index=df.index)
     if 'Employment Type' in df.columns:
-        freelancers = len(df[df['Employment Type'].str.contains('Freelancer|freelancer|Contract', case=False, na=False)])
-        contractor_ratio = (freelancers / total * 100) if total > 0 else 0
+        contractor_mask |= df['Employment Type'].str.contains(
+            'Freelancer|freelancer|Contract', case=False, na=False
+        )
+    if 'Employment Form' in df.columns:
+        contractor_mask |= df['Employment Form'].str.contains('Outsourced', case=False, na=False)
+    contractor_ratio = (contractor_mask.sum() / total * 100) if total > 0 else 0
 
     nationality_count = df['Nationality'].nunique() if 'Nationality' in df.columns else 0
 
-    male_count = len(df[df['Gender'] == 'M']) if 'Gender' in df.columns else 0
-    female_count = len(df[df['Gender'] == 'F']) if 'Gender' in df.columns else 0
+    # Gender — supports both M/F (old) and Male/Female (new)
+    if 'Gender' in df.columns:
+        male_count = df['Gender'].isin(['M', 'Male']).sum()
+        female_count = df['Gender'].isin(['F', 'Female']).sum()
+    else:
+        male_count = female_count = 0
     gender_ratio = f"{male_count}:{female_count}"
 
     probation_pass_rate = 0
@@ -190,6 +266,9 @@ def get_manager_attrition(df):
     """Analyze attrition linked to managers."""
     col = 'Direct Manager CRM while Resignation'
     if col not in df.columns:
+        # Fall back to Line Manager if available
+        col = 'Line Manager'
+    if col not in df.columns:
         return pd.DataFrame()
 
     departed = df[df['Employee Status'] == 'Departed']
@@ -200,11 +279,11 @@ def get_manager_attrition(df):
     if len(mgr_df) == 0:
         return pd.DataFrame()
 
-    count_col = 'Full Name' if 'Full Name' in mgr_df.columns else mgr_df.columns[0]
+    name_col = 'Full Name' if 'Full Name' in mgr_df.columns else mgr_df.columns[0]
     has_tenure = 'Tenure (Months)' in mgr_df.columns
     has_reason = 'Exit Reason Category' in mgr_df.columns
 
-    agg_dict = {'Departures': (count_col, 'count')}
+    agg_dict = {'Departures': (name_col, 'count')}
     if has_tenure:
         agg_dict['Avg_Tenure'] = ('Tenure (Months)', 'mean')
     if has_reason:
@@ -212,7 +291,7 @@ def get_manager_attrition(df):
 
     manager_data = mgr_df.groupby(col).agg(**agg_dict).reset_index()
 
-    rename = {col: 'Manager CRM', 'Departures': 'Departures'}
+    rename = {col: 'Manager', 'Departures': 'Departures'}
     if has_tenure:
         rename['Avg_Tenure'] = 'Avg Tenure (Months)'
     if has_reason:

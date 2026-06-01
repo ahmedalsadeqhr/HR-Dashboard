@@ -27,7 +27,7 @@ COLOR_SEQUENCE = [
 
 DATA_FILE = "Master.xlsx"
 
-REQUIRED_COLUMNS = ['Gender', 'Department', 'Position', 'Employee Status', 'Exit Type']
+REQUIRED_COLUMNS = ['Full Name', 'Employee Status', 'Department', 'Join Date']
 
 CHART_CONFIG = {
     'displayModeBar': True,

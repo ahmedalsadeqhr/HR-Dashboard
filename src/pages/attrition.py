@@ -6,8 +6,8 @@ from src.data_processing import get_manager_attrition
 from src.utils import _style
 
 
-_VOLUNTARY_TYPES   = ['Resigned', 'Dropped']
-_INVOLUNTARY_TYPES = ['Terminated']
+_VOLUNTARY_TYPES   = ['Voluntary Termination', 'Resigned', 'Dropped']
+_INVOLUNTARY_TYPES = ['Involuntary Termination', 'Terminated']
 
 _NEON = ['#06B6D4', '#7C3AED', '#D946EF', '#10B981', '#F59E0B', '#EF4444', '#3B82F6', '#F97316']
 
@@ -76,8 +76,8 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
     total_departed = len(departed_df)
 
     col1, col2, col3 = st.columns(3)
-    col1.metric("Voluntary (Resigned/Dropped)", f"{voluntary} ({voluntary / total_departed * 100:.1f}%)")
-    col2.metric("Involuntary (Terminated)", f"{involuntary} ({involuntary / total_departed * 100:.1f}%)")
+    col1.metric("Voluntary Terminations", f"{voluntary} ({voluntary / total_departed * 100:.1f}%)")
+    col2.metric("Involuntary Terminations", f"{involuntary} ({involuntary / total_departed * 100:.1f}%)")
     col3.metric("Total Departures", f"{total_departed}")
 
     vol_data = pd.DataFrame({
@@ -138,7 +138,7 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
         vol_df   = departed_df[departed_df['Exit Type'].isin(_VOLUNTARY_TYPES)]
         invol_df = departed_df[departed_df['Exit Type'].isin(_INVOLUNTARY_TYPES)]
 
-        st.subheader(f"Voluntary Exit Reasons — {len(vol_df)} employees (Resigned / Dropped)")
+        st.subheader(f"Voluntary Exit Reasons — {len(vol_df)} employees")
         if len(vol_df) > 0:
             vol_reasons = (
                 vol_df['Exit Reason Category'].dropna()
@@ -177,7 +177,7 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
         st.markdown("---")
 
         # ── 3. Involuntary exit reason breakdown ──────────────────────────
-        st.subheader(f"Involuntary Exit Reasons — {len(invol_df)} employees (Terminated)")
+        st.subheader(f"Involuntary Exit Reasons — {len(invol_df)} employees")
         if len(invol_df) > 0:
             invol_reasons = (
                 invol_df['Exit Reason Category'].dropna()
@@ -257,7 +257,8 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
     manager_data = get_manager_attrition(filtered_df)
     if len(manager_data) > 0:
         st.markdown("*Which managers had the most departures under them?*")
-        mgr_chart_kwargs = dict(x='Departures', y='Manager CRM', orientation='h')
+        mgr_col = 'Manager CRM' if 'Manager CRM' in manager_data.columns else 'Manager'
+        mgr_chart_kwargs = dict(x='Departures', y=mgr_col, orientation='h')
         if 'Avg Tenure (Months)' in manager_data.columns:
             mgr_chart_kwargs['color'] = 'Avg Tenure (Months)'
             mgr_chart_kwargs['color_continuous_scale'] = 'RdYlBu'

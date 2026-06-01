@@ -1,17 +1,15 @@
 import streamlit as st
 import pandas as pd
-import streamlit_authenticator as stauth
-from src.config import REQUIRED_COLUMNS
-from src.upload import detect_schema_changes, prepare_upload, validate_required_columns
-from src.db import replace_employees, log_upload, fetch_last_upload
-from src.data_processing import load_from_db
-
-st.set_page_config(page_title="Upload Master Sheet", page_icon="📤")
-
-# ── Auth ────────────────────────────────────────────────────────────────────
-# Deep-copy secrets into plain dicts — streamlit-authenticator modifies credentials
-# in-place (to hash passwords) which fails on Streamlit's read-only secrets object
 import json
+import streamlit_authenticator as stauth
+
+from src.data_processing import merge_two_sources, load_from_db
+from src.upload import prepare_upload
+from src.db import replace_employees, log_upload, fetch_last_upload
+
+st.set_page_config(page_title="Upload HR Data", page_icon="📤")
+
+# ── Auth ─────────────────────────────────────────────────────────────────────
 credentials = json.loads(json.dumps({"usernames": st.secrets["credentials"]["usernames"].to_dict()}))
 cookie_cfg = st.secrets["cookie"].to_dict()
 
@@ -34,11 +32,10 @@ if auth_status is None:
     st.info("Please log in to upload data.")
     st.stop()
 
-# ── Authenticated ────────────────────────────────────────────────────────────
-st.title("📤 Upload Master Sheet")
+# ── Authenticated ─────────────────────────────────────────────────────────────
+st.title("📤 Upload HR Data")
 authenticator.logout(location="sidebar")
 
-# Show current data stats
 last = fetch_last_upload()
 if last:
     st.info(
@@ -46,81 +43,100 @@ if last:
         f"by **{last['uploaded_by']}** — **{last['row_count']:,}** rows"
     )
 else:
-    st.warning("No data in the system yet. Upload a Master Sheet to get started.")
+    st.warning("No data in the system yet. Upload both files below to get started.")
 
 st.divider()
 
-# ── File Upload ──────────────────────────────────────────────────────────────
-uploaded_file = st.file_uploader("Select Master Sheet (.xlsx)", type=["xlsx"])
+st.markdown("""
+Upload the two source files exported from the HR system:
 
-if uploaded_file is None:
+| File | What it contains |
+|---|---|
+| **Active Employees** | All current employees (`All Active Employees_*.xlsx`) |
+| **Offboarding / Leavers** | Departed employees (`Offboarding Management_*.xlsx`) |
+
+Both files are merged automatically — no column mapping needed.
+""")
+
+# ── File Uploaders ────────────────────────────────────────────────────────────
+col1, col2 = st.columns(2)
+
+with col1:
+    active_file = st.file_uploader(
+        "Active Employees (.xlsx)",
+        type=["xlsx"],
+        key="active_upload",
+    )
+
+with col2:
+    leavers_file = st.file_uploader(
+        "Offboarding / Leavers (.xlsx)",
+        type=["xlsx"],
+        key="leavers_upload",
+    )
+
+if active_file is None or leavers_file is None:
+    st.info("Please upload both files to continue.")
     st.stop()
 
-# Parse file
+# ── Parse files ───────────────────────────────────────────────────────────────
 try:
-    raw_df = pd.read_excel(uploaded_file)
+    active_raw = pd.read_excel(active_file)
 except Exception as e:
-    st.error(f"Could not read Excel file: {e}")
+    st.error(f"Could not read Active Employees file: {e}")
     st.stop()
 
-st.success(f"File parsed: {len(raw_df):,} rows, {len(raw_df.columns)} columns detected.")
-
-# ── Column Mapping ───────────────────────────────────────────────────────────
-schema_changes = detect_schema_changes(raw_df, REQUIRED_COLUMNS)
-
-if schema_changes:
-    st.subheader("Column Mapping Required")
-    st.caption("Some expected columns were not found. Map them below or mark as Skip.")
-
-    mapping = {}
-    all_file_cols = list(raw_df.columns)
-    skip_option = "— Skip (drop this column) —"
-
-    for required_col, guess in schema_changes.items():
-        default = guess if guess in all_file_cols else skip_option
-        selected = st.selectbox(
-            f'Map file column for **"{required_col}"**',
-            options=all_file_cols + [skip_option],
-            index=(all_file_cols + [skip_option]).index(default) if default in (all_file_cols + [skip_option]) else len(all_file_cols),
-            key=f"map_{required_col}",
-        )
-        if selected == skip_option:
-            mapping[required_col] = None
-        else:
-            mapping[selected] = required_col
-
-    # Apply mapping to a preview copy
-    preview_df = raw_df.copy()
-    for src, tgt in mapping.items():
-        if tgt is None and src in preview_df.columns:
-            preview_df = preview_df.drop(columns=[src])
-        elif tgt and src in preview_df.columns:
-            preview_df = preview_df.rename(columns={src: tgt})
-else:
-    mapping = {}
-    preview_df = raw_df.copy()
-
-# ── Validation ───────────────────────────────────────────────────────────────
-missing = validate_required_columns(preview_df, REQUIRED_COLUMNS)
-if missing:
-    st.error(f"Cannot upload — required columns still missing: **{', '.join(missing)}**")
-    st.caption("Please fix the column mapping above or check your Excel file.")
+try:
+    leavers_raw = pd.read_excel(leavers_file)
+except Exception as e:
+    st.error(f"Could not read Offboarding file: {e}")
     st.stop()
 
-st.success("All required columns present. Ready to upload.")
+# Row 0 is display-name headers, real data starts row 1
+active_rows = len(active_raw) - 1
+leavers_rows = len(leavers_raw) - 1
 
-# ── Confirm & Upload ─────────────────────────────────────────────────────────
-with st.expander("Preview first 5 rows"):
-    st.dataframe(preview_df.head())
+st.success(
+    f"Files parsed — **{active_rows:,}** active employees, "
+    f"**{leavers_rows:,}** leaver records (effective only after merge)."
+)
 
+# ── Merge ─────────────────────────────────────────────────────────────────────
+try:
+    merged_df = merge_two_sources(active_raw, leavers_raw)
+except Exception as e:
+    st.error(f"Merge failed: {e}")
+    st.stop()
+
+active_count = (merged_df['Employee Status'] == 'Active').sum()
+leaver_count = (merged_df['Employee Status'] == 'Departed').sum()
+
+st.markdown(
+    f"**Merged dataset:** {len(merged_df):,} total rows — "
+    f"{active_count:,} active, {leaver_count:,} departed (effective only)."
+)
+
+# ── Preview ───────────────────────────────────────────────────────────────────
+with st.expander("Preview merged data (first 10 rows)"):
+    st.dataframe(merged_df.head(10), use_container_width=True)
+
+with st.expander("Column summary"):
+    col_info = pd.DataFrame({
+        'Column': merged_df.columns,
+        'Non-null': merged_df.notna().sum().values,
+        'Sample': [str(merged_df[c].dropna().iloc[0]) if merged_df[c].notna().any() else '—' for c in merged_df.columns],
+    })
+    st.dataframe(col_info, use_container_width=True, hide_index=True)
+
+# ── Upload ────────────────────────────────────────────────────────────────────
 if st.button("Apply Upload", type="primary"):
-    with st.spinner("Uploading to Supabase..."):
+    with st.spinner("Preparing and uploading to Supabase..."):
         try:
-            final_df = prepare_upload(raw_df.copy(), mapping)
+            final_df = prepare_upload(merged_df.copy(), {})
             replace_employees(final_df)
             log_upload(username, len(final_df), list(final_df.columns))
-            load_from_db.clear()  # Invalidate dashboard cache
-            st.success(f"{len(final_df):,} rows loaded. Dashboard is now live.")
+            load_from_db.clear()
+            st.success(f"{len(final_df):,} rows uploaded. Dashboard is now live.")
             st.balloons()
         except Exception as e:
             st.error(f"Upload failed: {e}")
