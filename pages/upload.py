@@ -43,43 +43,34 @@ if last:
         f"by **{last['uploaded_by']}** — **{last['row_count']:,}** rows"
     )
 else:
-    st.warning("No data in the system yet. Upload both files below to get started.")
+    st.warning("No data in the system yet.")
 
 st.divider()
 
-st.markdown("""
-Upload the two source files exported from the HR system:
+# ── Step 1: Active Employees ──────────────────────────────────────────────────
+st.subheader("Step 1 — Active Employees file")
+st.caption("Export: All Active Employees_*.xlsx")
+active_file = st.file_uploader("", type=["xlsx"], key="active_upload", label_visibility="collapsed")
 
-| File | What it contains |
-|---|---|
-| **Active Employees** | All current employees (`All Active Employees_*.xlsx`) |
-| **Offboarding / Leavers** | Departed employees (`Offboarding Management_*.xlsx`) |
+# ── Step 2: Leavers ───────────────────────────────────────────────────────────
+st.subheader("Step 2 — Offboarding / Leavers file")
+st.caption("Export: Offboarding Management_*.xlsx")
+leavers_file = st.file_uploader("", type=["xlsx"], key="leavers_upload", label_visibility="collapsed")
 
-Both files are merged automatically — no column mapping needed.
-""")
+# ── Status indicators ─────────────────────────────────────────────────────────
+active_ok  = active_file is not None
+leavers_ok = leavers_file is not None
 
-# ── File Uploaders ────────────────────────────────────────────────────────────
-col1, col2 = st.columns(2)
+c1, c2 = st.columns(2)
+c1.markdown(f"Active file: {'✅ loaded' if active_ok else '⏳ waiting'}")
+c2.markdown(f"Leavers file: {'✅ loaded' if leavers_ok else '⏳ waiting'}")
 
-with col1:
-    active_file = st.file_uploader(
-        "Active Employees (.xlsx)",
-        type=["xlsx"],
-        key="active_upload",
-    )
-
-with col2:
-    leavers_file = st.file_uploader(
-        "Offboarding / Leavers (.xlsx)",
-        type=["xlsx"],
-        key="leavers_upload",
-    )
-
-if active_file is None or leavers_file is None:
-    st.info("Please upload both files to continue.")
+if not (active_ok and leavers_ok):
     st.stop()
 
-# ── Parse files ───────────────────────────────────────────────────────────────
+st.divider()
+
+# ── Parse & Merge ─────────────────────────────────────────────────────────────
 try:
     active_raw = pd.read_excel(active_file)
 except Exception as e:
@@ -92,31 +83,20 @@ except Exception as e:
     st.error(f"Could not read Offboarding file: {e}")
     st.stop()
 
-# Row 0 is display-name headers, real data starts row 1
-active_rows = len(active_raw) - 1
-leavers_rows = len(leavers_raw) - 1
-
-st.success(
-    f"Files parsed — **{active_rows:,}** active employees, "
-    f"**{leavers_rows:,}** leaver records (effective only after merge)."
-)
-
-# ── Merge ─────────────────────────────────────────────────────────────────────
 try:
     merged_df = merge_two_sources(active_raw, leavers_raw)
 except Exception as e:
     st.error(f"Merge failed: {e}")
     st.stop()
 
-active_count = (merged_df['Employee Status'] == 'Active').sum()
-leaver_count = (merged_df['Employee Status'] == 'Departed').sum()
+active_count  = (merged_df['Employee Status'] == 'Active').sum()
+leaver_count  = (merged_df['Employee Status'] == 'Departed').sum()
 
-st.markdown(
-    f"**Merged dataset:** {len(merged_df):,} total rows — "
-    f"{active_count:,} active, {leaver_count:,} departed (effective only)."
+st.success(
+    f"Ready to upload — **{len(merged_df):,} total rows**: "
+    f"{active_count:,} active, {leaver_count:,} departed."
 )
 
-# ── Preview ───────────────────────────────────────────────────────────────────
 with st.expander("Preview merged data (first 10 rows)"):
     st.dataframe(merged_df.head(10), use_container_width=True)
 
@@ -124,13 +104,17 @@ with st.expander("Column summary"):
     col_info = pd.DataFrame({
         'Column': merged_df.columns,
         'Non-null': merged_df.notna().sum().values,
-        'Sample': [str(merged_df[c].dropna().iloc[0]) if merged_df[c].notna().any() else '—' for c in merged_df.columns],
+        'Sample': [
+            str(merged_df[c].dropna().iloc[0]) if merged_df[c].notna().any() else '—'
+            for c in merged_df.columns
+        ],
     })
     st.dataframe(col_info, use_container_width=True, hide_index=True)
 
 # ── Upload ────────────────────────────────────────────────────────────────────
+st.divider()
 if st.button("Apply Upload", type="primary"):
-    with st.spinner("Preparing and uploading to Supabase..."):
+    with st.spinner("Uploading to Supabase..."):
         try:
             final_df = prepare_upload(merged_df.copy(), {})
             replace_employees(final_df)
