@@ -9,22 +9,38 @@ from src.utils import _style, dept_group
 _VOLUNTARY_TYPES   = ['Voluntary Termination', 'Resigned', 'Dropped']
 _INVOLUNTARY_TYPES = ['Involuntary Termination', 'Terminated']
 
-_VOLUNTARY_KEYWORDS   = ['voluntary', 'resign', 'drop']
-_INVOLUNTARY_KEYWORDS = ['involuntary', 'terminat', 'dismiss', 'fired', 'layoff']
+def _classify_exit(exit_type) -> str:
+    """Classify an exit type string as 'Voluntary', 'Involuntary', or 'Unclassified'.
+
+    Involuntary is checked first because 'voluntary' is a substring of 'involuntary'.
+    'terminat' only maps to Involuntary when 'voluntary' is absent (to avoid matching
+    'Voluntary Termination' as involuntary).
+    """
+    if not isinstance(exit_type, str) or not exit_type.strip():
+        return 'Unclassified'
+    t = exit_type.lower().strip()
+    # Exact matches take priority
+    if any(t == v.lower() for v in _INVOLUNTARY_TYPES):
+        return 'Involuntary'
+    if any(t == v.lower() for v in _VOLUNTARY_TYPES):
+        return 'Voluntary'
+    # Keyword matching — involuntary first (since 'voluntary' ⊂ 'involuntary')
+    if any(k in t for k in ['involuntary', 'dismiss', 'fired', 'layoff']):
+        return 'Involuntary'
+    # 'terminat' alone → Involuntary only when 'voluntary' is not present
+    if 'terminat' in t and 'voluntary' not in t:
+        return 'Involuntary'
+    if any(k in t for k in ['voluntary', 'resign', 'drop']):
+        return 'Voluntary'
+    return 'Unclassified'
 
 
 def _is_voluntary(exit_type) -> bool:
-    if not isinstance(exit_type, str):
-        return False
-    t = exit_type.lower().strip()
-    return any(t == v.lower() for v in _VOLUNTARY_TYPES) or any(k in t for k in _VOLUNTARY_KEYWORDS)
+    return _classify_exit(exit_type) == 'Voluntary'
 
 
 def _is_involuntary(exit_type) -> bool:
-    if not isinstance(exit_type, str):
-        return False
-    t = exit_type.lower().strip()
-    return any(t == v.lower() for v in _INVOLUNTARY_TYPES) or any(k in t for k in _INVOLUNTARY_KEYWORDS)
+    return _classify_exit(exit_type) == 'Involuntary'
 
 _NEON = ['#06B6D4', '#7C3AED', '#D946EF', '#10B981', '#F59E0B', '#EF4444', '#3B82F6', '#F97316']
 
