@@ -71,8 +71,8 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
 
     # Voluntary vs Involuntary
     st.subheader("Voluntary vs Involuntary Turnover")
-    voluntary = len(departed_df[departed_df['Exit Type'].isin(['Resigned', 'Dropped'])])
-    involuntary = len(departed_df[departed_df['Exit Type'] == 'Terminated'])
+    voluntary = len(departed_df[departed_df['Exit Type'].isin(_VOLUNTARY_TYPES)])
+    involuntary = len(departed_df[departed_df['Exit Type'].isin(_INVOLUNTARY_TYPES)])
     total_departed = len(departed_df)
 
     col1, col2, col3 = st.columns(3)
