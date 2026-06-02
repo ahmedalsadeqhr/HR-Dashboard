@@ -9,6 +9,23 @@ from src.utils import _style, dept_group
 _VOLUNTARY_TYPES   = ['Voluntary Termination', 'Resigned', 'Dropped']
 _INVOLUNTARY_TYPES = ['Involuntary Termination', 'Terminated']
 
+_VOLUNTARY_KEYWORDS   = ['voluntary', 'resign', 'drop']
+_INVOLUNTARY_KEYWORDS = ['involuntary', 'terminat', 'dismiss', 'fired', 'layoff']
+
+
+def _is_voluntary(exit_type) -> bool:
+    if not isinstance(exit_type, str):
+        return False
+    t = exit_type.lower().strip()
+    return any(t == v.lower() for v in _VOLUNTARY_TYPES) or any(k in t for k in _VOLUNTARY_KEYWORDS)
+
+
+def _is_involuntary(exit_type) -> bool:
+    if not isinstance(exit_type, str):
+        return False
+    t = exit_type.lower().strip()
+    return any(t == v.lower() for v in _INVOLUNTARY_TYPES) or any(k in t for k in _INVOLUNTARY_KEYWORDS)
+
 _NEON = ['#06B6D4', '#7C3AED', '#D946EF', '#10B981', '#F59E0B', '#EF4444', '#3B82F6', '#F97316']
 
 
@@ -71,8 +88,8 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
 
     # Voluntary vs Involuntary
     st.subheader("Voluntary vs Involuntary Turnover")
-    voluntary = len(departed_df[departed_df['Exit Type'].isin(_VOLUNTARY_TYPES)])
-    involuntary = len(departed_df[departed_df['Exit Type'].isin(_INVOLUNTARY_TYPES)])
+    voluntary = departed_df['Exit Type'].apply(_is_voluntary).sum()
+    involuntary = departed_df['Exit Type'].apply(_is_involuntary).sum()
     total_departed = len(departed_df)
 
     col1, col2, col3 = st.columns(3)
@@ -80,19 +97,22 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
     col2.metric("Involuntary Terminations", f"{involuntary} ({involuntary / total_departed * 100:.1f}%)")
     col3.metric("Total Departures", f"{total_departed}")
 
-    vol_data = pd.DataFrame({
-        'Type': ['Voluntary', 'Involuntary'],
-        'Count': [voluntary, involuntary]
-    })
-    fig = px.pie(vol_data, values='Count', names='Type',
-                 color_discrete_sequence=['#06B6D4', '#EF4444'], hole=0.62)
-    fig.update_traces(
-        textinfo='percent+label', textfont_size=11, textfont_color='#E2E8F0',
-        marker=dict(line=dict(color='#0D0E1A', width=3)), pull=[0.04, 0],
-    )
-    fig.update_layout(showlegend=True, legend=dict(orientation='h', y=-0.12,
-                      font=dict(color='#94A3B8')))
-    st.plotly_chart(_style(fig, 360), use_container_width=True, config=CHART_CONFIG)
+    if voluntary + involuntary > 0:
+        vol_data = pd.DataFrame({
+            'Type': ['Voluntary', 'Involuntary'],
+            'Count': [voluntary, involuntary]
+        })
+        fig = px.pie(vol_data, values='Count', names='Type',
+                     color_discrete_sequence=['#06B6D4', '#EF4444'], hole=0.62)
+        fig.update_traces(
+            textinfo='percent+label', textfont_size=11, textfont_color='#E2E8F0',
+            marker=dict(line=dict(color='#0D0E1A', width=3)), pull=[0.04, 0],
+        )
+        fig.update_layout(showlegend=True, legend=dict(orientation='h', y=-0.12,
+                          font=dict(color='#94A3B8')))
+        st.plotly_chart(_style(fig, 360), use_container_width=True, config=CHART_CONFIG)
+    else:
+        st.info("Exit Type data could not be classified. Check the Exit Types chart above for actual values in the dataset.")
 
     st.markdown("---")
 
@@ -135,8 +155,8 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
 
     # ── 2. Voluntary exit reason breakdown ────────────────────────────────
     if 'Exit Reason Category' in departed_df.columns:
-        vol_df   = departed_df[departed_df['Exit Type'].isin(_VOLUNTARY_TYPES)]
-        invol_df = departed_df[departed_df['Exit Type'].isin(_INVOLUNTARY_TYPES)]
+        vol_df   = departed_df[departed_df['Exit Type'].apply(_is_voluntary)]
+        invol_df = departed_df[departed_df['Exit Type'].apply(_is_involuntary)]
 
         st.subheader(f"Voluntary Exit Reasons — {len(vol_df)} employees")
         if len(vol_df) > 0:

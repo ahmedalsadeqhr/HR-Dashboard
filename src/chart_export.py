@@ -4,6 +4,7 @@ import io
 from datetime import datetime
 
 import pandas as pd
+import streamlit as st
 from openpyxl import Workbook
 from openpyxl.chart import BarChart, PieChart, LineChart, Reference
 from openpyxl.chart.series import DataPoint
@@ -161,6 +162,7 @@ def _line(ws, title: str, cat_col: int, val_cols: list[int],
     ws.add_chart(chart, anchor)
 
 
+@st.cache_data(show_spinner=False)
 def build_charts_excel(filtered_df: pd.DataFrame, kpis: dict) -> io.BytesIO:
     """
     Generate an Excel workbook with data tables + native Excel charts per section.

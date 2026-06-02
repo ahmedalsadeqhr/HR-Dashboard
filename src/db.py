@@ -1,4 +1,5 @@
 import pandas as pd
+import streamlit as st
 from src.supabase_client import get_supabase_client
 
 _INTERNAL_COLS = {"id", "_uploaded_at"}
@@ -37,6 +38,7 @@ def fetch_employees() -> pd.DataFrame:
     return pd.DataFrame([r["data"] for r in all_rows])
 
 
+@st.cache_data(ttl=300, show_spinner=False)
 def fetch_last_upload() -> dict | None:
     """Return the most recent upload_log row, or None if no uploads yet."""
     client = get_supabase_client()
