@@ -62,6 +62,8 @@ def dept_group(dept) -> str:
         return 'CM'
     if 'EGCC' in dept:
         return 'CC'
+    if 'EGTMK' in dept:
+        return 'TMK'
     return dept
 
 
