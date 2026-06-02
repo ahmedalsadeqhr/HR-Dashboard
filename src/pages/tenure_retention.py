@@ -1,7 +1,7 @@
 import streamlit as st
 import plotly.express as px
 
-from src.utils import _style
+from src.utils import _style, dept_group
 
 
 def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG):
@@ -20,7 +20,20 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
 
     st.markdown("---")
 
-    st.subheader("Average Tenure by Department")
+    st.subheader("Average Tenure by Department — Consolidated")
+    grp = filtered_df.copy()
+    grp['Dept Group'] = grp['Department'].map(dept_group)
+    grp_tenure = grp.groupby('Dept Group')['Tenure (Months)'].agg(['mean', 'median', 'count']).round(1)
+    grp_tenure.columns = ['Avg Tenure', 'Median Tenure', 'Count']
+    grp_tenure = grp_tenure.sort_values('Avg Tenure', ascending=False).reset_index()
+    fig = px.bar(grp_tenure, x='Dept Group', y='Avg Tenure',
+                 color='Avg Tenure', color_continuous_scale='Blues',
+                 text='Avg Tenure', hover_data=['Median Tenure', 'Count'])
+    fig.update_traces(texttemplate='%{text:.1f}', textposition='outside')
+    fig.update_layout(xaxis_tickangle=-45)
+    st.plotly_chart(_style(fig, 450), use_container_width=True, config=CHART_CONFIG)
+
+    st.subheader("Average Tenure by Department — Detailed")
     tenure_dept = filtered_df.groupby('Department')['Tenure (Months)'].agg(['mean', 'median', 'count']).round(1)
     tenure_dept.columns = ['Avg Tenure', 'Median Tenure', 'Count']
     tenure_dept = tenure_dept.sort_values('Avg Tenure', ascending=False).reset_index()
@@ -44,7 +57,32 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
         col2.metric("Median", f"{dep_all['Tenure (Months)'].median():.1f} mo")
         col3.metric("Left ≤ 1 Month", f"{(dep_all['Tenure (Months)'] <= 1).sum():,}")
 
-        # By Department
+        # By Department — consolidated
+        dep_grp = dep_all.copy()
+        dep_grp['Dept Group'] = dep_grp['Department'].map(dept_group)
+        ttd_grp = (
+            dep_grp.groupby('Dept Group')['Tenure (Months)']
+            .agg(Avg='mean', Median='median', Count='count')
+            .round(1).reset_index().sort_values('Avg')
+        )
+        st.subheader("Avg Tenure at Exit by Department — Consolidated")
+        fig = px.bar(
+            ttd_grp, x='Avg', y='Dept Group', orientation='h',
+            text='Avg', color='Avg',
+            color_continuous_scale=[[0, '#EF4444'], [0.5, '#F59E0B'], [1, '#10B981']],
+            hover_data=['Median', 'Count'],
+        )
+        fig.update_traces(texttemplate='%{text:.1f} mo', textposition='outside',
+                          textfont=dict(color='#CBD5E1', size=11), marker_line_width=0)
+        fig.update_layout(coloraxis_showscale=False,
+                          xaxis=dict(title='Avg Months Before Departure'),
+                          yaxis=dict(title=None, tickfont=dict(size=11, color='#94A3B8')),
+                          margin=dict(t=10, b=40, l=160, r=80))
+        st.plotly_chart(_style(fig, max(360, len(ttd_grp) * 38)),
+                        use_container_width=True, config=CHART_CONFIG)
+
+        st.subheader("Avg Tenure at Exit by Department — Detailed")
+        # By Department — detailed
         ttd_dept = (
             dep_all.groupby('Department')['Tenure (Months)']
             .agg(Avg='mean', Median='median', Count='count')
@@ -122,6 +160,30 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
     dep_df_all = filtered_df[filtered_df['Employee Status'] == 'Departed']
 
     if len(dep_df_all) > 0 and 'Tenure (Months)' in dep_df_all.columns:
+        # Consolidated
+        dep_df_grp = dep_df_all.copy()
+        dep_df_grp['Dept Group'] = dep_df_grp['Department'].map(dept_group)
+        grp_stats = dep_df_grp.groupby('Dept Group').agg(
+            Total_Departed=('Tenure (Months)', 'count'),
+            Early_Departed=('Tenure (Months)', lambda x: (x <= 3).sum()),
+        ).reset_index()
+        grp_stats['Early Departure Rate %'] = (
+            grp_stats['Early_Departed'] / grp_stats['Total_Departed'] * 100
+        ).round(1)
+        grp_stats = grp_stats.sort_values('Early Departure Rate %', ascending=False)
+        st.caption("Consolidated view")
+        fig = px.bar(
+            grp_stats, x='Dept Group', y='Early Departure Rate %',
+            text='Early Departure Rate %', color='Early Departure Rate %',
+            color_continuous_scale=[[0, '#064E3B'], [0.5, '#F59E0B'], [1, '#EF4444']],
+        )
+        fig.update_traces(texttemplate='%{text:.1f}%', textposition='outside',
+                          textfont=dict(color='#CBD5E1', size=11), marker_line_width=0)
+        fig.update_layout(coloraxis_showscale=False, xaxis_tickangle=-35,
+                          yaxis=dict(title='% of Departed Employees', ticksuffix='%'))
+        st.plotly_chart(_style(fig, 400), use_container_width=True, config=CHART_CONFIG)
+
+        st.caption("Detailed view")
         dept_stats = dep_df_all.groupby('Department').agg(
             Total_Departed=('Tenure (Months)', 'count'),
             Early_Departed=('Tenure (Months)', lambda x: (x <= 3).sum()),

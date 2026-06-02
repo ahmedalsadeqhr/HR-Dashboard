@@ -49,6 +49,22 @@ def _style(fig, height=400):
     return fig
 
 
+def dept_group(dept) -> str:
+    """Map a granular department name to its consolidated group label.
+
+    EGSS → SS, EGLP → CM, EGCC → CC, anything else kept as-is.
+    """
+    if not isinstance(dept, str):
+        return str(dept) if dept is not None else 'Unknown'
+    if 'EGSS' in dept:
+        return 'SS'
+    if 'EGLP' in dept:
+        return 'CM'
+    if 'EGCC' in dept:
+        return 'CC'
+    return dept
+
+
 def delta(filtered_val, all_val, suffix="", filtered_len=0, full_len=0):
     """Return delta string if filters are active, else None."""
     if filtered_len == full_len:

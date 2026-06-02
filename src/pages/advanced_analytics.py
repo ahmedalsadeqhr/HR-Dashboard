@@ -3,7 +3,7 @@ import pandas as pd
 import plotly.express as px
 from datetime import datetime
 
-from src.utils import _style
+from src.utils import _style, dept_group
 
 
 def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG):
@@ -33,13 +33,31 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
                 measurable['Exit Date'].notna() &
                 ((measurable['Exit Date'] - measurable['Join Date']).dt.days <= 90)
             )
+            # Consolidated
+            meas_grp = measurable.copy()
+            meas_grp['Dept Group'] = meas_grp['Department'].map(dept_group)
+            grp_total = meas_grp.groupby('Dept Group').size().rename('Total')
+            grp_left = meas_grp[left_90_mask].groupby('Dept Group').size().rename('Left <90d')
+            grp_90 = pd.concat([grp_total, grp_left], axis=1).fillna(0).reset_index()
+            grp_90['Left <90d'] = grp_90['Left <90d'].astype(int)
+            grp_90['Retention %'] = ((1 - grp_90['Left <90d'] / grp_90['Total']) * 100).round(1)
+            grp_90 = grp_90.sort_values('Retention %')
+            st.caption("Consolidated view")
+            fig = px.bar(grp_90, x='Dept Group', y='Retention %',
+                         color='Retention %', color_continuous_scale='RdYlGn',
+                         text='Retention %')
+            fig.update_traces(texttemplate='%{text:.1f}%', textposition='outside')
+            fig.update_layout(xaxis_tickangle=-45)
+            st.plotly_chart(_style(fig, 400), use_container_width=True, config=CHART_CONFIG)
+
+            # Detailed
             dept_total = measurable.groupby('Department').size().rename('Total')
             dept_left = measurable[left_90_mask].groupby('Department').size().rename('Left <90d')
             dept_90 = pd.concat([dept_total, dept_left], axis=1).fillna(0).reset_index()
             dept_90['Left <90d'] = dept_90['Left <90d'].astype(int)
             dept_90['Retention %'] = ((1 - dept_90['Left <90d'] / dept_90['Total']) * 100).round(1)
             dept_90 = dept_90.sort_values('Retention %')
-
+            st.caption("Detailed view")
             fig = px.bar(dept_90, x='Department', y='Retention %',
                          color='Retention %', color_continuous_scale='RdYlGn',
                          text='Retention %')

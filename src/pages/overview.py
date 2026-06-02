@@ -1,7 +1,7 @@
 import streamlit as st
 import plotly.express as px
 
-from src.utils import _style
+from src.utils import _style, dept_group
 
 def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG):
     col1, col2 = st.columns(2)
@@ -40,7 +40,20 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
 
     st.markdown("---")
 
-    st.subheader("Department Breakdown")
+    st.subheader("Department Breakdown — Consolidated")
+    grp = filtered_df.copy()
+    grp['Dept Group'] = grp['Department'].map(dept_group)
+    grp_data = grp.groupby(['Dept Group', 'Employee Status']).size().reset_index(name='Count')
+    fig = px.bar(grp_data, x='Dept Group', y='Count', color='Employee Status',
+                 color_discrete_map={'Active': '#06B6D4', 'Departed': '#EF4444'},
+                 barmode='group', text_auto=True)
+    fig.update_traces(textfont_size=9, textfont_color='#94A3B8', textposition='outside',
+                      marker_line_width=0, opacity=0.9)
+    fig.update_layout(xaxis_tickangle=-35, bargap=0.28,
+                      xaxis=dict(tickfont=dict(color='#475569')))
+    st.plotly_chart(_style(fig, 440), use_container_width=True, config=CHART_CONFIG)
+
+    st.subheader("Department Breakdown — Detailed")
     dept_data = filtered_df.groupby(['Department', 'Employee Status']).size().reset_index(name='Count')
     fig = px.bar(dept_data, x='Department', y='Count', color='Employee Status',
                  color_discrete_map={'Active': '#06B6D4', 'Departed': '#EF4444'},

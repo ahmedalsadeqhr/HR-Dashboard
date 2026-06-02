@@ -3,7 +3,7 @@ import pandas as pd
 import plotly.express as px
 
 from src.data_processing import get_manager_attrition
-from src.utils import _style
+from src.utils import _style, dept_group
 
 
 _VOLUNTARY_TYPES   = ['Voluntary Termination', 'Resigned', 'Dropped']
@@ -215,8 +215,32 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
 
     st.markdown("---")
 
-    # Attrition by department
-    st.subheader("Departure Rate by Department")
+    # Attrition by department — consolidated
+    st.subheader("Departure Rate by Department — Consolidated")
+    grp = filtered_df.copy()
+    grp['Dept Group'] = grp['Department'].map(dept_group)
+    grp_attrition = grp.groupby('Dept Group').agg(
+        Active=('Employee Status', lambda x: (x == 'Active').sum()),
+        Departed=('Employee Status', lambda x: (x == 'Departed').sum()),
+        Total=('Employee Status', 'count')
+    ).reset_index()
+    grp_attrition['Departure Rate %'] = (grp_attrition['Departed'] / grp_attrition['Total'] * 100).round(1)
+    grp_attrition = grp_attrition.sort_values('Departure Rate %', ascending=False)
+    fig = px.bar(grp_attrition, x='Dept Group', y='Departure Rate %',
+                 color='Departure Rate %',
+                 color_continuous_scale=[[0, '#064E3B'], [0.5, '#7C3AED'], [1, '#EF4444']],
+                 text='Departure Rate %')
+    fig.update_traces(texttemplate='%{text:.1f}%', textposition='outside',
+                      marker_line_width=0, opacity=0.92,
+                      textfont=dict(color='#94A3B8', size=10))
+    fig.update_layout(xaxis_tickangle=-35, coloraxis_showscale=False)
+    st.plotly_chart(_style(fig, 440), use_container_width=True, config=CHART_CONFIG)
+    st.dataframe(grp_attrition, use_container_width=True, hide_index=True)
+
+    st.markdown("---")
+
+    # Attrition by department — detailed
+    st.subheader("Departure Rate by Department — Detailed")
     dept_attrition = filtered_df.groupby('Department').agg(
         Active=('Employee Status', lambda x: (x == 'Active').sum()),
         Departed=('Employee Status', lambda x: (x == 'Departed').sum()),
