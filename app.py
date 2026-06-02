@@ -7,7 +7,7 @@ from pathlib import Path
 from src.config import COLORS, COLOR_SEQUENCE, CHART_CONFIG, REQUIRED_COLUMNS, detect_name_column
 from src.data_processing import load_from_db, calculate_kpis
 from src.db import fetch_last_upload
-from src.utils import delta
+from src.utils import delta, dept_group
 from src.chart_export import build_charts_excel
 from src.pages import analysis, employee_data
 
@@ -20,8 +20,6 @@ st.set_page_config(page_title="51Talk HR Analytics", page_icon="assets/logo.png"
 def load_css():
     st.markdown("""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
-    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap');
 
     /* ======================================================
        DESIGN TOKENS  — Dark Neon Theme
@@ -632,8 +630,8 @@ st.sidebar.markdown("---")
 st.sidebar.header("Filters")
 
 if st.sidebar.button("Reset All Filters"):
-    for key in ['dept_filter', 'status_filter', 'gender_filter', 'vendor_filter',
-                'nationality_filter', 'exit_type_filter',
+    for key in ['dept_group_filter', 'dept_filter', 'status_filter', 'gender_filter',
+                'vendor_filter', 'nationality_filter', 'exit_type_filter',
                 'join_start', 'join_end', 'exit_start', 'exit_end']:
         st.session_state.pop(key, None)
     st.rerun()
@@ -670,8 +668,11 @@ if 'Exit Date' in df.columns:
         label_visibility="collapsed", key="exit_end",
     )
 
+all_dept_groups = sorted(df['Department'].dropna().map(dept_group).unique().tolist())
+dept_group_filter = st.sidebar.multiselect("Department", all_dept_groups, default=all_dept_groups, key="dept_group_filter")
+
 all_depts = sorted(df['Department'].dropna().unique().tolist())
-dept_filter = st.sidebar.multiselect("Department", all_depts, default=all_depts)
+dept_filter = st.sidebar.multiselect("Teams", all_depts, default=all_depts)
 
 gender_filter = st.sidebar.selectbox("Gender", ["All"] + df['Gender'].dropna().unique().tolist())
 
@@ -692,7 +693,7 @@ exit_type_filter = st.sidebar.selectbox(
 )
 
 # Apply filters
-filtered_df = df.copy()
+filtered_df = df
 
 if 'Join Date' in filtered_df.columns and (join_start or join_end):
     if join_start and join_end and join_start > join_end:
@@ -719,6 +720,8 @@ if 'Exit Date' in filtered_df.columns and (exit_start or exit_end):
                 (filtered_df['Exit Date'].dt.date <= exit_end)
             ]
 
+if dept_group_filter:
+    filtered_df = filtered_df[filtered_df['Department'].map(dept_group).isin(dept_group_filter)]
 if dept_filter:
     filtered_df = filtered_df[filtered_df['Department'].isin(dept_filter)]
 if status_filter != "All":
