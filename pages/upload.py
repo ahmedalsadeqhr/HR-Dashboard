@@ -120,6 +120,7 @@ if st.button("Apply Upload", type="primary"):
             replace_employees(final_df)
             log_upload(username, len(final_df), list(final_df.columns))
             load_from_db.clear()
+            fetch_last_upload.clear()
             st.success(f"{len(final_df):,} rows uploaded. Dashboard is now live.")
             st.balloons()
         except Exception as e:
