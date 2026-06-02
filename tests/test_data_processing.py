@@ -119,7 +119,7 @@ def test_manager_attrition_with_column():
     result = get_manager_attrition(df)
     if len(df[df['Employee Status'] == 'Departed']) > 0:
         assert len(result) > 0
-        assert 'Manager CRM' in result.columns
+        assert 'Manager' in result.columns
         assert 'Departures' in result.columns
 
 

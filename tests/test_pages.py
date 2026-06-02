@@ -34,8 +34,3 @@ def test_employee_data_importable():
 def test_advanced_analytics_importable():
     from src.pages import advanced_analytics
     assert callable(advanced_analytics.render)
-
-
-def test_edit_data_importable():
-    from src.pages import edit_data
-    assert callable(edit_data.render)

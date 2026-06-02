@@ -686,8 +686,8 @@ class TestManagerAttrition:
         df = process_data(_build_raw_df(rows))
         result = get_manager_attrition(df)
         assert len(result) == 2
-        alice_row = result[result["Manager CRM"] == "Alice"]
-        bob_row = result[result["Manager CRM"] == "Bob"]
+        alice_row = result[result["Manager"] == "Alice"]
+        bob_row = result[result["Manager"] == "Bob"]
         assert alice_row["Departures"].iloc[0] == 2
         assert bob_row["Departures"].iloc[0] == 1
 
@@ -763,7 +763,7 @@ class TestManagerAttrition:
         ]
         df = process_data(_build_raw_df(rows))
         result = get_manager_attrition(df)
-        assert "Manager CRM" in result.columns
+        assert "Manager" in result.columns
         assert "Departures" in result.columns
 
 
@@ -913,7 +913,7 @@ class TestGenerateSummaryReport:
         assert f"Total Employees: {kpis['total']:,}" in report
         assert f"Active: {kpis['active']:,}" in report
         assert f"Departed: {kpis['departed']:,}" in report
-        assert f"Attrition Rate: {kpis['attrition_rate']:.1f}%" in report
+        assert f"Departure Rate: {kpis['attrition_rate']:.1f}%" in report
         assert f"Retention Rate: {kpis['retention_rate']:.1f}%" in report
 
     def test_contains_department_breakdown_section(self):
@@ -984,7 +984,6 @@ class TestAppIntegration:
         from src.pages import (
             advanced_analytics,
             attrition,
-            edit_data,
             employee_data,
             overview,
             tenure_retention,
@@ -992,7 +991,7 @@ class TestAppIntegration:
             workforce,
         )
         for mod in [overview, attrition, tenure_retention, workforce,
-                    trends, employee_data, advanced_analytics, edit_data]:
+                    trends, employee_data, advanced_analytics]:
             assert callable(mod.render)
 
     def test_all_render_functions_accept_7_params(self):
@@ -1000,7 +999,6 @@ class TestAppIntegration:
         from src.pages import (
             advanced_analytics,
             attrition,
-            edit_data,
             employee_data,
             overview,
             tenure_retention,
@@ -1010,7 +1008,7 @@ class TestAppIntegration:
         expected_params = ["df", "filtered_df", "kpis", "NAME_COL",
                            "COLORS", "COLOR_SEQUENCE", "CHART_CONFIG"]
         for mod in [overview, attrition, tenure_retention, workforce,
-                    trends, employee_data, advanced_analytics, edit_data]:
+                    trends, employee_data, advanced_analytics]:
             sig = inspect.signature(mod.render)
             params = list(sig.parameters.keys())
             assert params == expected_params, (

@@ -22,7 +22,7 @@ def test_chart_config_structure():
 
 
 def test_required_columns():
-    assert len(REQUIRED_COLUMNS) == 5
+    assert len(REQUIRED_COLUMNS) == 4
     for col in REQUIRED_COLUMNS:
         assert isinstance(col, str)
 

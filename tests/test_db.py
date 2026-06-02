@@ -43,17 +43,20 @@ def test_get_supabase_client_is_singleton():
 
 
 def test_fetch_employees_returns_dataframe():
-    """fetch_employees() returns a DataFrame."""
+    """fetch_employees() returns a DataFrame.
+
+    fetch_employees paginates via .select().range().execute(), and each row
+    from Supabase is {"data": {...}} — the JSONB column wrapping the payload.
+    """
     mock_client = MagicMock()
-    mock_client.table.return_value.select.return_value.execute.return_value.data = [
-        {"id": 1, "Gender": "M", "Department": "Tech", "_uploaded_at": "2026-01-01"}
-    ]
+    page_data = [{"data": {"Gender": "M", "Department": "Tech"}}]
+    # First call returns one row (< page_size → loop stops); subsequent calls empty.
+    mock_client.table.return_value.select.return_value.range.return_value.execute.return_value.data = page_data
     with patch("src.db.get_supabase_client", return_value=mock_client):
         df = fetch_employees()
         assert isinstance(df, pd.DataFrame)
         assert "Gender" in df.columns
-        assert "_uploaded_at" not in df.columns  # internal column stripped
-        assert "id" not in df.columns  # id column stripped
+        assert "Department" in df.columns
 
 
 def test_fetch_employees_returns_empty_dataframe_when_no_data():
