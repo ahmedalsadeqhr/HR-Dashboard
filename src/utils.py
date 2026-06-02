@@ -56,13 +56,14 @@ def dept_group(dept) -> str:
     """
     if not isinstance(dept, str):
         return str(dept) if dept is not None else 'Unknown'
-    if 'EGSS' in dept:
+    upper = dept.upper()
+    if 'EGSS' in upper or 'BACKEND SALES' in upper or 'UPGRADE' in upper:
         return 'SS'
-    if 'EGLP' in dept:
+    if 'EGLP' in upper or 'BACKEND SERVICE' in upper:
         return 'CM'
-    if 'EGCC' in dept:
+    if 'EGCC' in upper:
         return 'CC'
-    if 'EGTMK' in dept:
+    if 'EGTMK' in upper:
         return 'TMK'
     return dept
 
