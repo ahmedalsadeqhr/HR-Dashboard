@@ -2,7 +2,7 @@ name: Supabase Keep-Alive
 
 on:
   schedule:
-    - cron: '0 8 */5 * *'  # every 5 days at 08:00 UTC
+    - cron: '0 8 */3 * *'  # every 3 days at 08:00 UTC — 4-day buffer before Supabase's 7-day freeze
   workflow_dispatch:         # allow manual trigger
 
 jobs:
@@ -10,32 +10,39 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Validate secrets
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: |
-          if [ -z "${{ secrets.SUPABASE_URL }}" ]; then
+          if [ -z "${SUPABASE_URL}" ]; then
             echo "ERROR: SUPABASE_URL secret is empty or not set."
             exit 1
           fi
-          if [ -z "${{ secrets.SUPABASE_SERVICE_KEY }}" ]; then
+          if [ -z "${SUPABASE_SERVICE_KEY}" ]; then
             echo "ERROR: SUPABASE_SERVICE_KEY secret is empty or not set."
             exit 1
           fi
           echo "Secrets are present."
           echo "URL length: ${#SUPABASE_URL}"
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
 
-      - name: Ping Supabase
+      - name: Ping Supabase (with retry)
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: |
-          response=$(curl -s -o /dev/null -w "%{http_code}" \
-            "${SUPABASE_URL}/rest/v1/upload_log?select=id&limit=1" \
-            -H "apikey: ${SUPABASE_SERVICE_KEY}" \
-            -H "Authorization: Bearer ${SUPABASE_SERVICE_KEY}")
-          echo "HTTP status: $response"
-          if [ "$response" != "200" ]; then
-            echo "Ping failed with status $response"
-            exit 1
-          fi
-          echo "Supabase is alive."
+          for attempt in 1 2 3; do
+            echo "Attempt $attempt..."
+            response=$(curl -s -o /dev/null -w "%{http_code}" \
+              "${SUPABASE_URL}/rest/v1/upload_log?select=id&limit=1" \
+              -H "apikey: ${SUPABASE_SERVICE_KEY}" \
+              -H "Authorization: Bearer ${SUPABASE_SERVICE_KEY}")
+            echo "HTTP status: $response"
+            if [ "$response" = "200" ]; then
+              echo "Supabase is alive."
+              exit 0
+            fi
+            echo "Ping failed with status $response — retrying in 30s..."
+            sleep 30
+          done
+          echo "All 3 attempts failed. Supabase may be paused — resume it at https://supabase.com/dashboard"
+          exit 1
