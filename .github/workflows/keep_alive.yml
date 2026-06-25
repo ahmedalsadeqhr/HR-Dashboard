@@ -2,8 +2,8 @@ name: Supabase Keep-Alive
 
 on:
   schedule:
-    - cron: '0 8 */3 * *'  # every 3 days at 08:00 UTC — 4-day buffer before Supabase's 7-day freeze
-  workflow_dispatch:         # allow manual trigger
+    - cron: '0 8 * * *'  # daily at 08:00 UTC — well inside Supabase's 7-day freeze window
+  workflow_dispatch:       # allow manual trigger
 
 jobs:
   ping:
@@ -25,24 +25,34 @@ jobs:
           echo "Secrets are present."
           echo "URL length: ${#SUPABASE_URL}"
 
-      - name: Ping Supabase (with retry)
+      # A read (SELECT) returns 200 but Supabase's inactivity scan does NOT count it as
+      # "sufficient activity". We perform an actual WRITE (upsert into a dedicated
+      # keep_alive table) so the project registers genuine database activity every day.
+      # One-time setup required in the Supabase SQL editor — see db/keep_alive.sql.
+      - name: Ping Supabase with a write (with retry)
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: |
           for attempt in 1 2 3; do
             echo "Attempt $attempt..."
-            response=$(curl -s -o /dev/null -w "%{http_code}" \
-              "${SUPABASE_URL}/rest/v1/upload_log?select=id&limit=1" \
+            now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+            response=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
+              "${SUPABASE_URL}/rest/v1/keep_alive" \
               -H "apikey: ${SUPABASE_SERVICE_KEY}" \
-              -H "Authorization: Bearer ${SUPABASE_SERVICE_KEY}")
+              -H "Authorization: Bearer ${SUPABASE_SERVICE_KEY}" \
+              -H "Content-Type: application/json" \
+              -H "Prefer: resolution=merge-duplicates,return=minimal" \
+              -d "{\"id\":1,\"last_ping\":\"${now}\"}")
             echo "HTTP status: $response"
-            if [ "$response" = "200" ]; then
-              echo "Supabase is alive."
+            # 201 = created, 204 = upsert with return=minimal, 200 = updated
+            if [ "$response" = "201" ] || [ "$response" = "204" ] || [ "$response" = "200" ]; then
+              echo "Supabase write succeeded — project registered as active."
               exit 0
             fi
-            echo "Ping failed with status $response — retrying in 30s..."
+            echo "Write failed with status $response — retrying in 30s..."
             sleep 30
           done
-          echo "All 3 attempts failed. Supabase may be paused — resume it at https://supabase.com/dashboard"
+          echo "All 3 attempts failed. Check the keep_alive table exists (db/keep_alive.sql)"
+          echo "and that the project is not already paused: https://supabase.com/dashboard"
           exit 1
