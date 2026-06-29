@@ -27,3 +27,8 @@
 - See `memory/italent.md`
 - Decisions confirmed: CC Team as pilot, no overtime, annual leave carryover allowed
 - Plans in `docs/plans/`
+
+## Compensation Benchmarking Platform (Mega Project)
+- See `C:\Users\high tech\.claude\projects\D--Desktop-HRBP\memory\compensation-platform.md`
+- Location: `D:\Desktop\compensation-platform\`
+- Phase 1 committed. Runner fix pending verification next session.
