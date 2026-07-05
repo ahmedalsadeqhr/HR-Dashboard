@@ -56,3 +56,21 @@ jobs:
           echo "All 3 attempts failed. Check the keep_alive table exists (db/keep_alive.sql)"
           echo "and that the project is not already paused: https://supabase.com/dashboard"
           exit 1
+
+      # Belt-and-suspenders: also touch a real app table. Supabase's pause scanner may
+      # weigh activity on user-facing tables differently than a dedicated keep-alive
+      # table. This is a read-only SELECT (no rows inserted/modified), so it can't
+      # corrupt data shown in the dashboard the way writing to employees/upload_log would.
+      - name: Read-only ping on employees table
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" \
+            "${SUPABASE_URL}/rest/v1/employees?select=id&limit=1" \
+            -H "apikey: ${SUPABASE_SERVICE_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_SERVICE_KEY}")
+          echo "HTTP status: $response"
+          if [ "$response" != "200" ]; then
+            echo "Warning: employees ping returned $response (non-fatal, keep_alive write already succeeded)"
+          fi
