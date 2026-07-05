@@ -89,7 +89,9 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
         turnover_df = pd.merge(monthly_hires, monthly_exits, on='Period', how='outer').fillna(0)
         turnover_df = turnover_df.sort_values('Period').tail(24)
         turnover_df['Cumulative Hires'] = turnover_df['Hires'].cumsum()
-        turnover_df['Turnover Rate %'] = (turnover_df['Exits'] / turnover_df['Cumulative Hires'].replace(0, 1) * 100).round(1)
+        turnover_df['Turnover Rate %'] = (
+            turnover_df['Exits'] / turnover_df['Cumulative Hires'].replace(0, 1) * 100
+        ).round(1)
 
         period_view = st.radio("View", ["Monthly", "Quarterly"], horizontal=True, key="turnover_period")
 

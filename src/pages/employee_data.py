@@ -102,7 +102,8 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
                 new_join_date = st.date_input("Join Date *")
                 new_exit_date = st.date_input("Exit Date (if departed)",
                                               value=None)
-                emp_types_list = df['Employment Type'].dropna().unique().tolist() if 'Employment Type' in df.columns else ['Full time']
+                emp_types_list = df['Employment Type'].dropna().unique(
+                ).tolist() if 'Employment Type' in df.columns else ['Full time']
                 new_type = st.selectbox("Employment Type", emp_types_list)
                 new_exit_type = st.selectbox("Exit Type", ["", "Resigned", "Terminated", "Dropped"])
                 new_exit_reason = st.text_input("Exit Reason Category", value="")
@@ -167,20 +168,33 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
 
                     with ecol1:
                         dept_list = sorted(df['Department'].dropna().unique().tolist())
-                        edit_dept = st.selectbox("Department", dept_list,
-                                                 index=dept_list.index(emp_row['Department']) if emp_row['Department'] in dept_list else 0)
+                        dept_index = (
+                            dept_list.index(emp_row['Department'])
+                            if emp_row['Department'] in dept_list else 0
+                        )
+                        edit_dept = st.selectbox("Department", dept_list, index=dept_index)
                         edit_position = st.text_input("Position", value=str(emp_row.get('Position', '')))
-                        edit_status = st.selectbox("Employee Status", ["Active", "Departed"],
-                                                   index=0 if emp_row.get('Employee Status') == 'Active' else 1)
+                        edit_status = st.selectbox(
+                            "Employee Status", ["Active", "Departed"],
+                            index=0 if emp_row.get('Employee Status') == 'Active' else 1,
+                        )
 
                     with ecol2:
-                        edit_exit_date = st.date_input("Exit Date",
-                                                       value=emp_row['Exit Date'].date() if pd.notna(emp_row.get('Exit Date')) else None)
+                        exit_date_value = (
+                            emp_row['Exit Date'].date() if pd.notna(emp_row.get('Exit Date')) else None
+                        )
+                        edit_exit_date = st.date_input("Exit Date", value=exit_date_value)
                         exit_options = ["", "Resigned", "Terminated", "Dropped"]
-                        edit_exit_type = st.selectbox("Exit Type", exit_options,
-                                                      index=exit_options.index(emp_row['Exit Type']) if pd.notna(emp_row.get('Exit Type')) and emp_row['Exit Type'] in exit_options else 0)
-                        edit_exit_reason = st.text_input("Exit Reason Category",
-                                                          value=str(emp_row.get('Exit Reason Category', '')) if pd.notna(emp_row.get('Exit Reason Category')) else "")
+                        exit_type_index = (
+                            exit_options.index(emp_row['Exit Type'])
+                            if pd.notna(emp_row.get('Exit Type')) and emp_row['Exit Type'] in exit_options else 0
+                        )
+                        edit_exit_type = st.selectbox("Exit Type", exit_options, index=exit_type_index)
+                        exit_reason_value = (
+                            str(emp_row.get('Exit Reason Category', ''))
+                            if pd.notna(emp_row.get('Exit Reason Category')) else ""
+                        )
+                        edit_exit_reason = st.text_input("Exit Reason Category", value=exit_reason_value)
 
                     edit_submitted = st.form_submit_button("Save Changes")
 
@@ -196,7 +210,8 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
                             df.at[emp_idx, 'Exit Reason Category'] = edit_exit_reason
 
                         st.session_state['hr_data'] = df
-                        st.success(f"Updated {emp_row.get(NAME_COL, 'employee') if NAME_COL else 'employee'} successfully!")
+                        emp_name = emp_row.get(NAME_COL, 'employee') if NAME_COL else 'employee'
+                        st.success(f"Updated {emp_name} successfully!")
                         st.download_button(
                             "Download updated data as Excel",
                             data=export_excel(df),

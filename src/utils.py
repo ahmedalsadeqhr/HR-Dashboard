@@ -3,12 +3,12 @@ import pandas as pd
 from datetime import datetime
 
 
-_DARK_BG   = 'rgba(0,0,0,0)'         # transparent — card provides background
-_GRID      = 'rgba(255,255,255,0.05)'
+_DARK_BG = 'rgba(0,0,0,0)'         # transparent — card provides background
+_GRID = 'rgba(255,255,255,0.05)'
 _AXIS_LINE = 'rgba(255,255,255,0.08)'
-_TICK_CLR  = '#475569'
-_TEXT_CLR  = '#94A3B8'
-_FONT_FAM  = 'Space Grotesk, Inter, system-ui, sans-serif'
+_TICK_CLR = '#475569'
+_TEXT_CLR = '#94A3B8'
+_FONT_FAM = 'Space Grotesk, Inter, system-ui, sans-serif'
 
 
 def _style(fig, height=400):

@@ -194,9 +194,9 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
         dept_stats = dept_stats.sort_values('Early Departure Rate %', ascending=False)
 
         # Summary KPIs
-        total_dep   = len(dep_df_all)
-        early_dep   = (dep_df_all['Tenure (Months)'] <= 3).sum()
-        c1, c2, c3  = st.columns(3)
+        total_dep = len(dep_df_all)
+        early_dep = (dep_df_all['Tenure (Months)'] <= 3).sum()
+        c1, c2, c3 = st.columns(3)
         c1.metric("Total Departed", f"{total_dep:,}")
         c2.metric("Left Within 3 Months", f"{early_dep:,}")
         c3.metric("Early Departure Rate", f"{early_dep / total_dep * 100:.1f}%")

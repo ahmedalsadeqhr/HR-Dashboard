@@ -56,7 +56,7 @@ def fetch_last_upload() -> dict | None:
 
 def replace_employees(df: pd.DataFrame) -> None:
     """Truncate employees table and insert all rows as JSONB in batches."""
-    import math, json
+    import math
     client = get_supabase_client()
     client.table("employees").delete().gte("id", 0).execute()
 
@@ -64,6 +64,7 @@ def replace_employees(df: pd.DataFrame) -> None:
     clean = df.where(pd.notnull(df), None)
     raw_records = clean.to_dict(orient="records")
     # Second pass: catch any remaining float NaN or inf that slipped through
+
     def sanitize(v):
         if isinstance(v, float) and (math.isnan(v) or math.isinf(v)):
             return None

@@ -1,16 +1,16 @@
 COLORS = {
-    'primary':   '#7C3AED',   # purple
+    'primary': '#7C3AED',   # purple
     'secondary': '#06B6D4',   # cyan
-    'success':   '#10B981',   # emerald
-    'danger':    '#EF4444',   # red
-    'warning':   '#F59E0B',   # amber
-    'info':      '#3B82F6',   # blue
-    'purple':    '#A78BFA',   # purple-light
-    'pink':      '#D946EF',   # magenta
-    'brown':     '#F97316',   # orange
-    'gray':      '#475569',
-    'light':     '#1E1F35',
-    'dark':      '#0D0E1A',
+    'success': '#10B981',   # emerald
+    'danger': '#EF4444',   # red
+    'warning': '#F59E0B',   # amber
+    'info': '#3B82F6',   # blue
+    'purple': '#A78BFA',   # purple-light
+    'pink': '#D946EF',   # magenta
+    'brown': '#F97316',   # orange
+    'gray': '#475569',
+    'light': '#1E1F35',
+    'dark': '#0D0E1A',
 }
 
 # Neon palette for dark theme

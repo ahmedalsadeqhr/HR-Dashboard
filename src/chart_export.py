@@ -1,7 +1,6 @@
 """Build all dashboard charts as native Excel charts in a multi-sheet workbook."""
 
 import io
-from datetime import datetime
 
 import pandas as pd
 import streamlit as st
@@ -15,18 +14,18 @@ from openpyxl.utils import get_column_letter
 
 # ── Theme colours (ARGB hex without #) ────────────────────────────────────
 _PURPLE = '7C3AED'
-_CYAN   = '06B6D4'
-_RED    = 'EF4444'
-_GREEN  = '10B981'
-_AMBER  = 'F59E0B'
+_CYAN = '06B6D4'
+_RED = 'EF4444'
+_GREEN = '10B981'
+_AMBER = 'F59E0B'
 _MAGENTA = 'D946EF'
-_BLUE   = '3B82F6'
+_BLUE = '3B82F6'
 _ORANGE = 'F97316'
 _PALETTE = [_PURPLE, _CYAN, _RED, _GREEN, _AMBER, _MAGENTA, _BLUE, _ORANGE]
 
 _HEADER_FILL = PatternFill('solid', fgColor='1E1F35')
 _HEADER_FONT = Font(bold=True, size=11, color='FFFFFF')
-_TITLE_FONT  = Font(bold=True, size=13, color=_PURPLE)
+_TITLE_FONT = Font(bold=True, size=13, color=_PURPLE)
 _THIN_BORDER = Border(
     bottom=Side(style='thin', color='CCCCCC'),
 )
@@ -207,7 +206,8 @@ def build_charts_excel(filtered_df: pd.DataFrame, kpis: dict) -> io.BytesIO:
 
     # ── 4. Department Breakdown ───────────────────────────────────────────
     ws = wb.create_sheet('Department Breakdown')
-    dept_status = filtered_df.groupby('Department')['Employee Status'].value_counts().unstack(fill_value=0).reset_index()
+    dept_status = filtered_df.groupby(
+        'Department')['Employee Status'].value_counts().unstack(fill_value=0).reset_index()
     _add_title(ws, 'Department Breakdown (Active vs Departed)')
     end = _write_table(ws, dept_status, start_row=3)
     val_cols = [i + 2 for i in range(len(dept_status.columns) - 1)]
@@ -233,7 +233,7 @@ def build_charts_excel(filtered_df: pd.DataFrame, kpis: dict) -> io.BytesIO:
         _add_title(ws, 'Exit Reason Categories')
         end = _write_table(ws, reason_df, start_row=3)
         _hbar(ws, reason_df, 'Exit Reason Categories', cat_col=1, val_cols=[2],
-              data_start=3, data_end=end - 1, anchor=f'D3',
+              data_start=3, data_end=end - 1, anchor='D3',
               colours=[_PURPLE], height=max(10, len(reason_df) * 1.5))
 
     # ── 7. Departure Rate by Department ──────────────────────────────────

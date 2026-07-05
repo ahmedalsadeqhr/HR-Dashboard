@@ -8,37 +8,37 @@ from src.db import fetch_employees
 # Both files export row 0 as English display-name headers; real data starts row 1.
 
 _ACTIVE_COLS = {
-    'JobNumber':                         'Employee ID',
-    'UserID-ExportName':                 'Full Name',
-    'UserID-Email':                      'Email',
-    'extcrmzh_615692_156087692':         'CRM Account',
-    'parent_Gender':                     'Gender',
-    'OIdDepartment':                     'Department',
-    'OIdJobPost':                        'Position',
-    'EmployType':                        'Employment Type',
-    'EmploymentForm':                    'Employment Form',
-    'OIdJobLevel':                       'Job Level',
-    'POIdEmpAdmin-ExportName':           'Line Manager',
-    'EntryDate':                         'Join Date',
-    'ProbationStopDate':                 'Probation Period End Date',
-    'RegularizationDate':                'Regularization Date',
-    'parent_Nationality':                'Nationality',
-    'parent_Birthday':                   'Birthday Date',
+    'JobNumber': 'Employee ID',
+    'UserID-ExportName': 'Full Name',
+    'UserID-Email': 'Email',
+    'extcrmzh_615692_156087692': 'CRM Account',
+    'parent_Gender': 'Gender',
+    'OIdDepartment': 'Department',
+    'OIdJobPost': 'Position',
+    'EmployType': 'Employment Type',
+    'EmploymentForm': 'Employment Form',
+    'OIdJobLevel': 'Job Level',
+    'POIdEmpAdmin-ExportName': 'Line Manager',
+    'EntryDate': 'Join Date',
+    'ProbationStopDate': 'Probation Period End Date',
+    'RegularizationDate': 'Regularization Date',
+    'parent_Nationality': 'Nationality',
+    'parent_Birthday': 'Birthday Date',
     'LookupPrefix_UserID_TerminateDate': 'Contract End Date',
 }
 
 _LEAVERS_COLS = {
-    'JobNumber':                  'Employee ID',
-    'UserID-ExportName':          'Full Name',
-    'UserID-Email':               'Email',
-    'extcrmzh_615692_156087692':  'CRM Account',
-    'EntryDate':                  'Join Date',
-    'TransitionTypeOID':          'Exit Type',
-    'ChangeReason':               'Exit Reason Category',
-    'LastWorkDate':               'Exit Date',
-    'OIdDepartment':              'Department',
-    'OIdJobPosition':             'Position',
-    'OIdJobLevel':                'Job Level',
+    'JobNumber': 'Employee ID',
+    'UserID-ExportName': 'Full Name',
+    'UserID-Email': 'Email',
+    'extcrmzh_615692_156087692': 'CRM Account',
+    'EntryDate': 'Join Date',
+    'TransitionTypeOID': 'Exit Type',
+    'ChangeReason': 'Exit Reason Category',
+    'LastWorkDate': 'Exit Date',
+    'OIdDepartment': 'Department',
+    'OIdJobPosition': 'Position',
+    'OIdJobLevel': 'Job Level',
 }
 
 
@@ -93,8 +93,8 @@ def process_data(df):
 
     # Backward-compat renames for old Master-sheet column names
     rename_map = {
-        'Join Date (yyyy/mm/dd)':  'Join Date',
-        'Exit Date yyyy/mm/dd':    'Exit Date',
+        'Join Date (yyyy/mm/dd)': 'Join Date',
+        'Exit Date yyyy/mm/dd': 'Exit Date',
         'Position (After Joining)': 'Position After Joining',
     }
     df = df.rename(columns={k: v for k, v in rename_map.items() if k in df.columns})

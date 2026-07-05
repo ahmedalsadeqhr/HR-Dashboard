@@ -6,8 +6,9 @@ from src.data_processing import get_manager_attrition
 from src.utils import _style, dept_group
 
 
-_VOLUNTARY_TYPES   = ['Voluntary Termination', 'Resigned', 'Dropped']
+_VOLUNTARY_TYPES = ['Voluntary Termination', 'Resigned', 'Dropped']
 _INVOLUNTARY_TYPES = ['Involuntary Termination', 'Terminated']
+
 
 def _classify_exit(exit_type) -> str:
     """Classify an exit type string as 'Voluntary', 'Involuntary', or 'Unclassified'.
@@ -41,6 +42,7 @@ def _is_voluntary(exit_type) -> bool:
 
 def _is_involuntary(exit_type) -> bool:
     return _classify_exit(exit_type) == 'Involuntary'
+
 
 _NEON = ['#06B6D4', '#7C3AED', '#D946EF', '#10B981', '#F59E0B', '#EF4444', '#3B82F6', '#F97316']
 
@@ -128,7 +130,10 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
                           font=dict(color='#94A3B8')))
         st.plotly_chart(_style(fig, 360), use_container_width=True, config=CHART_CONFIG)
     else:
-        st.info("Exit Type data could not be classified. Check the Exit Types chart above for actual values in the dataset.")
+        st.info(
+            "Exit Type data could not be classified. "
+            "Check the Exit Types chart above for actual values in the dataset."
+        )
 
     st.markdown("---")
 
@@ -145,7 +150,6 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
             .reset_index()
         )
         bucket_counts.columns = ['Tenure Bucket', 'Count']
-        total_dep = len(tenure_data)
         fig = px.pie(
             bucket_counts, values='Count', names='Tenure Bucket',
             color_discrete_sequence=_NEON,
@@ -171,7 +175,7 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
 
     # ── 2. Voluntary exit reason breakdown ────────────────────────────────
     if 'Exit Reason Category' in departed_df.columns:
-        vol_df   = departed_df[departed_df['Exit Type'].apply(_is_voluntary)]
+        vol_df = departed_df[departed_df['Exit Type'].apply(_is_voluntary)]
         invol_df = departed_df[departed_df['Exit Type'].apply(_is_involuntary)]
 
         st.subheader(f"Voluntary Exit Reasons — {len(vol_df)} employees")
@@ -302,7 +306,8 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
     # Exit Reasons breakdown
     if 'Exit Reason Category' in departed_df.columns:
         st.subheader("Exit Reasons (Categorized)")
-        reason_list = departed_df[departed_df['Exit Reason Category'].notna()]['Exit Reason Category'].value_counts().reset_index()
+        reason_list = departed_df[departed_df['Exit Reason Category'].notna(
+        )]['Exit Reason Category'].value_counts().reset_index()
         reason_list.columns = ['Reason', 'Count']
         if len(reason_list) > 0:
             fig = px.bar(reason_list, x='Count', y='Reason', orientation='h',

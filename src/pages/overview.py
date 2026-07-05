@@ -3,6 +3,7 @@ import plotly.express as px
 
 from src.utils import _style, dept_group
 
+
 def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG):
     col1, col2 = st.columns(2)
 

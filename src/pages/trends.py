@@ -12,17 +12,17 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
     # ── Combined Hiring vs Departure trend ────────────────────────────────
     st.subheader("Monthly Hiring vs Departures")
     if 'Join Month' in filtered_df.columns:
-        hiring  = filtered_df.groupby('Join Month').size().rename('Hires')
-        exits   = (
+        hiring = filtered_df.groupby('Join Month').size().rename('Hires')
+        exits = (
             trends_dep_df.groupby('Exit Month').size().rename('Exits')
             if len(trends_dep_df) > 0 and 'Exit Month' in trends_dep_df.columns
             else pd.Series(dtype=int)
         )
         all_months = sorted(set(hiring.index.tolist() + exits.index.tolist()))
         combined = pd.DataFrame({'Month': all_months})
-        combined['Hires']  = combined['Month'].map(hiring).fillna(0).astype(int)
-        combined['Exits']  = combined['Month'].map(exits).fillna(0).astype(int)
-        combined['Net']    = combined['Hires'] - combined['Exits']
+        combined['Hires'] = combined['Month'].map(hiring).fillna(0).astype(int)
+        combined['Exits'] = combined['Month'].map(exits).fillna(0).astype(int)
+        combined['Net'] = combined['Hires'] - combined['Exits']
 
         fig = go.Figure()
         fig.add_trace(go.Scatter(
@@ -77,7 +77,8 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
     st.subheader("Hire-to-Exit Ratio by Year")
     if 'Join Year' in filtered_df.columns:
         hires_yr = filtered_df.groupby('Join Year').size().rename('Hires')
-        exits_yr = trends_dep_df.groupby('Exit Year').size().rename('Exits') if len(trends_dep_df) > 0 else pd.Series(dtype=int)
+        exits_yr = trends_dep_df.groupby('Exit Year').size().rename(
+            'Exits') if len(trends_dep_df) > 0 else pd.Series(dtype=int)
 
         years = sorted(set(hires_yr.index.tolist() + exits_yr.index.tolist()))
         years = [y for y in years if y > 2000]
