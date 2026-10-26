@@ -7,6 +7,7 @@ from pathlib import Path
 from src.config import COLORS, COLOR_SEQUENCE, CHART_CONFIG, REQUIRED_COLUMNS, detect_name_column
 from src.data_processing import load_from_db, calculate_kpis
 from src.db import fetch_last_upload
+from src.db_errors import describe_db_error
 from src.utils import delta, dept_group
 from src.chart_export import build_charts_excel
 from src.pages import analysis, employee_data
@@ -608,10 +609,14 @@ if logo_path.exists():
 # ===================== DATA LOADING =====================
 st.sidebar.header("Data Source")
 
-df = load_from_db()
+try:
+    df = load_from_db()
+    last = fetch_last_upload()
+except Exception as exc:  # surface the real cause; Streamlit Cloud redacts it
+    st.error(describe_db_error(exc))
+    st.stop()
 
 # Show last updated badge in sidebar
-last = fetch_last_upload()
 if last:
     st.sidebar.caption(
         f"Last updated: {last['uploaded_at'][:10]} by {last['uploaded_by']} ({last['row_count']:,} rows)"
