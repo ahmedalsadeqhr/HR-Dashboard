@@ -2,7 +2,10 @@ import httpx
 from postgrest.exceptions import APIError
 
 _HINTS = {
-    "PGRST002": "The API is still loading its schema cache (common right after a project restore). Wait a few minutes and reload.",
+    "PGRST002": (
+        "The API is still loading its schema cache (common right after a project "
+        "restore). Wait a few minutes and reload."
+    ),
     "PGRST205": "Table not found. Check that the table exists in the restored project.",
     "42P01": "Table does not exist. Check that the table exists in the restored project.",
     "42501": "Permission denied. Check Row Level Security policies and that SUPABASE_KEY has read access.",
