@@ -74,3 +74,14 @@ jobs:
           if [ "$response" != "200" ]; then
             echo "Warning: employees ping returned $response (non-fatal, keep_alive write already succeeded)"
           fi
+
+  # GitHub disables scheduled workflows after 60 days without repo commits, which
+  # silently stopped this ping and let Supabase pause. This re-enables the workflow
+  # via the API on every scheduled run so that never happens.
+  workflow-keepalive:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - uses: liskin/gh-workflow-keepalive@f72ff1a1336129f29bf0166c0fd0ca6cf1bcb38c # v1.2.1
