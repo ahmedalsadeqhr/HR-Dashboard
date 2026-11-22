@@ -1033,9 +1033,12 @@ class TestAppIntegration:
                     trends, employee_data, advanced_analytics]:
             sig = inspect.signature(mod.render)
             params = list(sig.parameters.keys())
-            assert params == expected_params, (
-                f"{mod.__name__}.render has params {params}, expected {expected_params}"
+            expected = expected_params + (["scope_df"] if mod is advanced_analytics else [])
+            assert params == expected, (
+                f"{mod.__name__}.render has params {params}, expected {expected}"
             )
+            if mod is advanced_analytics:
+                assert sig.parameters["scope_df"].default is None  # optional
 
     def test_data_processing_module_importable(self):
         from src import data_processing

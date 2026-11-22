@@ -135,3 +135,20 @@ def test_chinese_team_names_are_normalised_to_english():
     out = process_data(df)['Department'].tolist()
     assert out == ['ME-EGSS-GCC01 Team', 'ME-EGSS-GCC01 Team',
                    'KSA Marketing Department', 'Arabic Teaching Project Department']
+
+
+def test_period_turnover_uses_average_headcount():
+    from src.data_processing import calculate_period_turnover
+    df = pd.DataFrame({
+        'Employee Status': ['Active', 'Active', 'Departed', 'Departed'],
+        'Join Date': ['2025-01-01'] * 4,
+        'Exit Date': [None, None, '2026-02-10', '2025-06-01'],
+    })
+    out = calculate_period_turnover(df, 'M', 24, today='2026-03-31').set_index('Period')
+    # Feb 2026: headcount start-of-month 3 (C still there), end 2 -> avg 2.5 ; 1 exit -> 40%
+    assert out.loc['2026-02', 'Exits'] == 1
+    assert out.loc['2026-02', 'Avg Headcount'] == 2.5
+    assert out.loc['2026-02', 'Turnover Rate %'] == 40.0
+    assert out.loc['2026-03', 'Turnover Rate %'] == 0.0
+    q = calculate_period_turnover(df, 'Q', 8, today='2026-03-31').set_index('Period')
+    assert q.loc['2026Q1', 'Exits'] == 1
