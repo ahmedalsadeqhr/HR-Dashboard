@@ -1057,3 +1057,16 @@ class TestAppIntegration:
         assert callable(config.detect_name_column)
         assert isinstance(config.COLORS, dict)
         assert isinstance(config.REQUIRED_COLUMNS, list)
+
+
+def test_process_data_adds_missing_exit_columns():
+    """Regression: KeyError 'Exit Type' when stored data has no leavers."""
+    df = pd.DataFrame({
+        "Employee Status": ["Active"],
+        "Join Date": [TODAY - timedelta(days=100)],
+        "Department": ["EGSS"],
+    })
+    result = process_data(df)
+    for col in ("Exit Type", "Gender", "Position"):
+        assert col in result.columns
+    assert result["Exit Type"].dropna().empty
