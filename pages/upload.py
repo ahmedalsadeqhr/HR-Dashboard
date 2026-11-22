@@ -97,6 +97,11 @@ st.success(
     f"{active_count:,} active, {leaver_count:,} departed."
 )
 
+dups = merged_df.attrs.get('duplicates_dropped', 0)
+if dups:
+    st.warning(f"{dups} duplicate Employee ID row(s) were removed "
+               "(repeated IDs, or people present in both files — the Active row was kept).")
+
 with st.expander("Preview merged data (first 10 rows)"):
     st.dataframe(merged_df.head(10), use_container_width=True)
 
