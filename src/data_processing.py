@@ -271,6 +271,33 @@ def process_data(df):
     return df
 
 
+def calculate_turnover_12m(df, today=None):
+    """Rolling 12-month turnover.
+
+    Turnover % = exits in the last 365 days / average headcount * 100, where average
+    headcount is the mean of headcount 12 months ago and headcount today (headcount on a
+    date = joined on/before it and not yet exited).
+    """
+    empty = {'turnover_12m': 0.0, 'exits_12m': 0, 'avg_headcount_12m': 0.0}
+    if 'Join Date' not in df.columns or 'Exit Date' not in df.columns or len(df) == 0:
+        return empty
+    today = pd.Timestamp(today if today is not None else datetime.now()).normalize()
+    start = today - pd.DateOffset(years=1)
+    join = pd.to_datetime(df['Join Date'], errors='coerce')
+    exit_dt = pd.to_datetime(df['Exit Date'], errors='coerce')
+
+    def headcount(on):
+        return int(((join <= on) & (exit_dt.isna() | (exit_dt > on))).sum())
+
+    exits = int(((exit_dt > start) & (exit_dt <= today)).sum())
+    avg_hc = (headcount(start) + headcount(today)) / 2
+    return {
+        'turnover_12m': (exits / avg_hc * 100) if avg_hc > 0 else 0.0,
+        'exits_12m': exits,
+        'avg_headcount_12m': avg_hc,
+    }
+
+
 @st.cache_data
 def calculate_kpis(df):
     """Calculate all KPI metrics from filtered dataframe."""
@@ -337,6 +364,7 @@ def calculate_kpis(df):
         'female_count': female_count,
         'probation_pass_rate': probation_pass_rate,
         'growth_rate': growth_rate,
+        **calculate_turnover_12m(df),
     }
 
 

@@ -774,6 +774,19 @@ row2[1].metric("Avg Tenure (Mo)", f"{kpis['avg_tenure']:.1f}",
 row2[2].metric("Average Age", f"{kpis['avg_age']:.0f}" if not pd.isna(kpis['avg_age']) else "N/A")
 row2[3].metric("Gender Ratio (M:F)", kpis['gender_ratio'])
 
+st.markdown("<div style='height:0.6rem'></div>", unsafe_allow_html=True)
+
+row3 = st.columns(4)
+row3[0].metric(
+    "Turnover Rate (12M)", f"{kpis['turnover_12m']:.1f}%",
+    delta=delta(kpis['turnover_12m'], kpis_all['turnover_12m'], '%', len(filtered_df), len(df)),
+    delta_color="inverse",
+    help="Exits in the last 12 months divided by average headcount "
+         "(mean of headcount 12 months ago and today).",
+)
+row3[1].metric("Exits (Last 12M)", f"{kpis['exits_12m']:,}")
+row3[2].metric("Avg Headcount (12M)", f"{kpis['avg_headcount_12m']:,.0f}")
+
 st.markdown("---")
 
 # ===================== DOWNLOAD CHARTS =====================

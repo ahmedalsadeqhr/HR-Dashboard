@@ -102,3 +102,24 @@ def test_departed_export_keeps_latest_stint_per_employee():
     merged = merge_two_sources(_active(['1']), dep)
     left = merged[merged['Employee Status'] == 'Departed']
     assert len(left) == 1 and str(left['Exit Date'].iloc[0]).startswith('2026-09-01')
+
+
+def test_turnover_12m_formula():
+    from src.data_processing import calculate_turnover_12m
+    today = pd.Timestamp('2026-06-30')
+    df = pd.DataFrame({
+        # A, B active all year; C left inside window; D left before window; E joined inside window
+        'Join Date': ['2024-01-01', '2024-01-01', '2024-01-01', '2024-01-01', '2026-03-01'],
+        'Exit Date': [None, None, '2026-02-01', '2025-01-01', None],
+    })
+    r = calculate_turnover_12m(df, today)
+    # headcount 2025-06-30: A,B,C = 3 ; headcount today: A,B,E = 3 ; avg 3 ; exits 1
+    assert r['exits_12m'] == 1
+    assert r['avg_headcount_12m'] == 3
+    assert r['turnover_12m'] == pytest.approx(33.33, abs=0.01)
+
+
+def test_turnover_12m_safe_without_exit_column_or_empty():
+    from src.data_processing import calculate_turnover_12m
+    assert calculate_turnover_12m(pd.DataFrame({'Join Date': ['2024-01-01']}))['turnover_12m'] == 0
+    assert calculate_turnover_12m(pd.DataFrame(columns=['Join Date', 'Exit Date']))['exits_12m'] == 0
