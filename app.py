@@ -5,7 +5,7 @@ from datetime import datetime
 from pathlib import Path
 
 from src.config import COLORS, COLOR_SEQUENCE, CHART_CONFIG, REQUIRED_COLUMNS, detect_name_column
-from src.data_processing import load_from_db, calculate_kpis
+from src.data_processing import load_from_db, calculate_kpis, calculate_turnover_12m
 from src.db import fetch_last_upload
 from src.db_errors import describe_db_error
 from src.utils import delta, dept_group
@@ -641,7 +641,7 @@ if st.sidebar.button("Reset All Filters"):
         st.session_state.pop(key, None)
     st.rerun()
 
-status_filter = st.sidebar.selectbox("Employee Status", ["All", "Active", "Departed"])
+status_filter = st.sidebar.selectbox("Employee Status", ["All", "Active", "Departed"], key="status_filter")
 
 st.sidebar.markdown("---")
 
@@ -677,24 +677,25 @@ all_dept_groups = sorted(df['Department'].dropna().map(dept_group).unique().toli
 dept_group_filter = st.sidebar.multiselect("Department", all_dept_groups, default=all_dept_groups, key="dept_group_filter")
 
 all_depts = sorted(df['Department'].dropna().unique().tolist())
-dept_filter = st.sidebar.multiselect("Teams", all_depts, default=all_depts)
+dept_filter = st.sidebar.multiselect("Teams", all_depts, default=all_depts, key="dept_filter")
 
-gender_filter = st.sidebar.selectbox("Gender", ["All"] + df['Gender'].dropna().unique().tolist())
+gender_filter = st.sidebar.selectbox(
+    "Gender", ["All"] + df['Gender'].dropna().unique().tolist(), key="gender_filter")
 
 if 'Vendor' in df.columns:
     vendors = sorted(df['Vendor'].dropna().unique().tolist())
-    vendor_filter = st.sidebar.selectbox("Vendor", ["All"] + vendors)
+    vendor_filter = st.sidebar.selectbox("Vendor", ["All"] + vendors, key="vendor_filter")
 else:
     vendor_filter = "All"
 
 if 'Nationality' in df.columns:
     nationalities = sorted(df['Nationality'].dropna().unique().tolist())
-    nationality_filter = st.sidebar.selectbox("Nationality", ["All"] + nationalities)
+    nationality_filter = st.sidebar.selectbox("Nationality", ["All"] + nationalities, key="nationality_filter")
 else:
     nationality_filter = "All"
 
 exit_type_filter = st.sidebar.selectbox(
-    "Exit Type", ["All"] + df['Exit Type'].dropna().unique().tolist()
+    "Exit Type", ["All"] + df['Exit Type'].dropna().unique().tolist(), key="exit_type_filter"
 )
 
 # Apply filters
@@ -729,14 +730,18 @@ if dept_group_filter:
     filtered_df = filtered_df[filtered_df['Department'].map(dept_group).isin(dept_group_filter)]
 if dept_filter:
     filtered_df = filtered_df[filtered_df['Department'].isin(dept_filter)]
-if status_filter != "All":
-    filtered_df = filtered_df[filtered_df['Employee Status'] == status_filter]
 if gender_filter != "All":
     filtered_df = filtered_df[filtered_df['Gender'] == gender_filter]
 if vendor_filter != "All":
     filtered_df = filtered_df[filtered_df['Vendor'] == vendor_filter]
 if nationality_filter != "All":
     filtered_df = filtered_df[filtered_df['Nationality'] == nationality_filter]
+
+# Turnover needs the whole workforce (active + departed) in scope, so it ignores the
+# Employee Status and Exit Type filters; every other filter still applies.
+scope_df = filtered_df
+if status_filter != "All":
+    filtered_df = filtered_df[filtered_df['Employee Status'] == status_filter]
 if exit_type_filter != "All":
     filtered_df = filtered_df[filtered_df['Exit Type'] == exit_type_filter]
 
@@ -745,7 +750,7 @@ if len(filtered_df) == 0:
     st.stop()
 
 # ===================== KPI SECTION =====================
-kpis = calculate_kpis(filtered_df)
+kpis = {**calculate_kpis(filtered_df), **calculate_turnover_12m(scope_df)}
 kpis_all = calculate_kpis(df)
 
 st.markdown('<div class="kpi-section-label">Key Performance Indicators</div>', unsafe_allow_html=True)
