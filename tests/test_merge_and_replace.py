@@ -123,3 +123,15 @@ def test_turnover_12m_safe_without_exit_column_or_empty():
     from src.data_processing import calculate_turnover_12m
     assert calculate_turnover_12m(pd.DataFrame({'Join Date': ['2024-01-01']}))['turnover_12m'] == 0
     assert calculate_turnover_12m(pd.DataFrame(columns=['Join Date', 'Exit Date']))['exits_12m'] == 0
+
+
+def test_chinese_team_names_are_normalised_to_english():
+    from src.data_processing import process_data
+    df = pd.DataFrame({
+        'Employee Status': ['Active', 'Departed', 'Departed', 'Departed'],
+        'Department': ['ME-EGSS-GCC01 Team', 'ME-EGSS-GCC01小组', 'KSA市场部', '阿教项目部'],
+        'Join Date': ['2025-01-01'] * 4,
+    })
+    out = process_data(df)['Department'].tolist()
+    assert out == ['ME-EGSS-GCC01 Team', 'ME-EGSS-GCC01 Team',
+                   'KSA Marketing Department', 'Arabic Teaching Project Department']

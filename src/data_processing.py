@@ -169,6 +169,21 @@ def load_from_db() -> pd.DataFrame:
     return process_data(df)
 
 
+_DEPT_NAME_FIXES = {
+    'KSA市场部': 'KSA Marketing Department',
+    '阿教项目部': 'Arabic Teaching Project Department',
+}
+
+
+def _normalise_department(name):
+    if not isinstance(name, str):
+        return name
+    name = name.strip()
+    if name in _DEPT_NAME_FIXES:
+        return _DEPT_NAME_FIXES[name]
+    return name.replace('小组', ' Team') if name.endswith('小组') else name
+
+
 def _probation_status(df, today):
     """Classify each row's probation outcome.
 
@@ -209,6 +224,11 @@ def process_data(df):
             df[col] = pd.NA
     if 'Employee Status' not in df.columns:
         df['Employee Status'] = 'Active'
+
+    # The Departed export names a few teams in Chinese while Active uses English, which
+    # splits one team into two in every department chart. Normalise to the English name.
+    if 'Department' in df.columns:
+        df['Department'] = df['Department'].map(_normalise_department)
 
     # Parse date columns
     date_cols = ['Join Date', 'Exit Date', 'Birthday Date', 'Probation Period End Date',
