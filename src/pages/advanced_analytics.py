@@ -7,7 +7,7 @@ from src.data_processing import calculate_period_turnover
 from src.utils import _style, dept_group
 
 
-def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG, scope_df=None):
+def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG):
 
     # --- 1. New Hire 90-Day Retention ---
     st.subheader("New Hire 90-Day Retention")
@@ -75,6 +75,7 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
     st.subheader("Rolling Turnover Rate")
     # Headcount needs active + departed employees, so use the scope that ignores the
     # Employee Status / Exit Type filters.
+    scope_df = st.session_state.get('scope_df')
     base = scope_df if scope_df is not None else filtered_df
     period_view = st.radio("View", ["Monthly", "Quarterly"], horizontal=True, key="turnover_period")
     if period_view == "Quarterly":

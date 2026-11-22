@@ -152,3 +152,12 @@ def test_period_turnover_uses_average_headcount():
     assert out.loc['2026-03', 'Turnover Rate %'] == 0.0
     q = calculate_period_turnover(df, 'Q', 8, today='2026-03-31').set_index('Period')
     assert q.loc['2026Q1', 'Exits'] == 1
+
+
+def test_app_entrypoints_parse():
+    """app.py and the upload page must be valid Python (AppTest hides syntax errors)."""
+    import ast
+    import pathlib
+    root = pathlib.Path(__file__).resolve().parent.parent
+    for rel in ("app.py", "pages/upload.py"):
+        ast.parse((root / rel).read_text(encoding="utf-8"), filename=rel)
