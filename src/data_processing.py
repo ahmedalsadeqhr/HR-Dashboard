@@ -66,8 +66,45 @@ def merge_two_sources(active_raw: pd.DataFrame, leavers_raw: pd.DataFrame) -> pd
     leavers = leavers[list(leavers_keep.keys())].rename(columns=leavers_keep)
     leavers['Employee Status'] = 'Departed'
 
+    _require_source_columns(active_raw, leavers_raw, active, leavers)
+
+    # Employee ID duplicates: within a file keep the last row; if someone is in
+    # both files (e.g. a rehire) the Active row wins so they are not counted twice.
+    dropped = 0
+    if 'Employee ID' in active.columns:
+        n = len(active)
+        active = active.drop_duplicates(subset='Employee ID', keep='last')
+        dropped += n - len(active)
+    if 'Employee ID' in leavers.columns:
+        n = len(leavers)
+        leavers = leavers.drop_duplicates(subset='Employee ID', keep='last')
+        dropped += n - len(leavers)
+        if 'Employee ID' in active.columns:
+            n = len(leavers)
+            leavers = leavers[~leavers['Employee ID'].isin(active['Employee ID'])]
+            dropped += n - len(leavers)
+
     combined = pd.concat([active, leavers], ignore_index=True, sort=False)
+    combined.attrs['duplicates_dropped'] = dropped
     return combined
+
+
+def _require_source_columns(active_raw, leavers_raw, active, leavers):
+    """Fail with a clear message when an export is missing columns the dashboard needs."""
+    problems = []
+    for src, tgt in (('EntryDate', 'Join Date'), ('OIdDepartment', 'Department')):
+        if tgt not in active.columns:
+            problems.append(f"Active Employees file is missing column '{src}' ({tgt})")
+    if len(leavers) > 0:
+        for src, tgt in (('LastWorkDate', 'Exit Date'), ('TransitionTypeOID', 'Exit Type'),
+                         ('EntryDate', 'Join Date')):
+            if tgt not in leavers.columns:
+                problems.append(
+                    f"Offboarding file is missing column '{src}' ({tgt}). "
+                    f"Columns found: {', '.join(map(str, leavers_raw.columns[:25]))}"
+                )
+    if problems:
+        raise ValueError('; '.join(problems))
 
 
 @st.cache_data
@@ -84,6 +121,26 @@ def load_from_db() -> pd.DataFrame:
     if df.empty:
         return df
     return process_data(df)
+
+
+def _probation_status(df, today):
+    """Classify each row's probation outcome.
+
+    Departed: 'Left During Probation' if exit is before the probation end,
+    'Completed Before Exit' if exit is on/after it, else 'No Data'.
+    Active: 'Completed' once the end date has passed, 'In Probation' before,
+    'No Data' when there is no end date.
+    """
+    end = df['Probation Period End Date']
+    exit_dt = df['Exit Date'] if 'Exit Date' in df.columns else pd.Series(pd.NaT, index=df.index)
+    departed = df['Employee Status'] == 'Departed'
+
+    active_status = np.where(end.isna(), 'No Data',
+                             np.where(end <= today, 'Completed', 'In Probation'))
+    departed_status = np.where(
+        end.isna() | exit_dt.isna(), 'No Data',
+        np.where(exit_dt < end, 'Left During Probation', 'Completed Before Exit'))
+    return np.where(departed, departed_status, active_status)
 
 
 def process_data(df):
@@ -136,23 +193,7 @@ def process_data(df):
 
     # Probation status
     if 'Probation Period End Date' in df.columns:
-        df['Probation Completed'] = np.where(
-            df['Probation Period End Date'].notna() & (df['Probation Period End Date'] <= today),
-            'Completed',
-            np.where(
-                df['Employee Status'] == 'Departed',
-                np.where(
-                    df['Probation Period End Date'].notna() & (df['Exit Date'] < df['Probation Period End Date']),
-                    'Left During Probation',
-                    'Completed Before Exit'
-                ),
-                np.where(
-                    df['Probation Period End Date'].notna(),
-                    'In Probation',
-                    'No Data'
-                )
-            )
-        )
+        df['Probation Completed'] = _probation_status(df, today)
 
     # Employment type cleanup (handles both old and new schema)
     if 'Employment Type' not in df.columns:
@@ -213,10 +254,11 @@ def calculate_kpis(df):
 
     probation_pass_rate = 0
     if 'Probation Completed' in df.columns:
-        prob_data = df[df['Probation Completed'] != 'No Data']
-        if len(prob_data) > 0:
-            completed = len(prob_data[prob_data['Probation Completed'].isin(['Completed', 'Completed Before Exit'])])
-            probation_pass_rate = (completed / len(prob_data) * 100)
+        # Only resolved outcomes count: still-in-probation and no-data rows are excluded.
+        passed = df['Probation Completed'].isin(['Completed', 'Completed Before Exit']).sum()
+        failed = (df['Probation Completed'] == 'Left During Probation').sum()
+        if passed + failed > 0:
+            probation_pass_rate = passed / (passed + failed) * 100
 
     growth_rate = 0
     if 'Join Year' in df.columns:

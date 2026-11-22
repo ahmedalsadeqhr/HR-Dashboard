@@ -289,37 +289,59 @@ class TestProcessData:
         assert result["Probation Completed"].iloc[0] == "Left During Probation"
 
     def test_probation_completed_before_exit(self):
-        """Departed employee whose probation end is past and exit after probation end
-        → Completed Before Exit.
-
-        The logic: Probation end is in the past (<=today) → 'Completed' wins at the
-        outer np.where. So to land in 'Completed Before Exit' we need a departed
-        employee with a probation end date that is still in the future (exit < prob_end
-        is False because exit is also after prob_end, so left_during_prob is False).
-
-        Actually re-reading the code:
-          outer condition: prob_end notna AND prob_end <= today → 'Completed'
-          else → if Departed:
-              if prob_end notna AND exit < prob_end → 'Left During Probation'
-              else → 'Completed Before Exit'
-          else → if prob_end notna → 'In Probation' else 'No Data'
-
-        So 'Completed Before Exit' = Departed + (prob_end is NaT OR exit >= prob_end)
-        AND NOT (prob_end notna AND prob_end <= today)
-        i.e. prob_end is in the future but exit >= prob_end (impossible since exit <=
-        today < prob_end) OR prob_end is NaT.
-        So: departed with NaT probation end → 'Completed Before Exit'.
-        """
-        join = TODAY - timedelta(days=300)
-        exit_dt = TODAY - timedelta(days=10)
+        """Departed after the probation end date (all dates in the past)."""
         row = {
             "Employee Status": "Departed",
-            "Join Date (yyyy/mm/dd)": join,
-            "Probation Period End Date": pd.NaT,  # NaT → falls into 'Completed Before Exit'
-            "Exit Date yyyy/mm/dd": exit_dt,
+            "Join Date (yyyy/mm/dd)": TODAY - timedelta(days=300),
+            "Probation Period End Date": TODAY - timedelta(days=200),
+            "Exit Date yyyy/mm/dd": TODAY - timedelta(days=10),
         }
         result = process_data(_build_raw_df([row]))
         assert result["Probation Completed"].iloc[0] == "Completed Before Exit"
+
+    def test_probation_left_during_probation_all_dates_past(self):
+        """Regression: leaver who exited before a probation end that is already past."""
+        row = {
+            "Employee Status": "Departed",
+            "Join Date (yyyy/mm/dd)": TODAY - timedelta(days=300),
+            "Probation Period End Date": TODAY - timedelta(days=210),
+            "Exit Date yyyy/mm/dd": TODAY - timedelta(days=250),
+        }
+        result = process_data(_build_raw_df([row]))
+        assert result["Probation Completed"].iloc[0] == "Left During Probation"
+
+    def test_probation_departed_without_end_date_is_no_data(self):
+        row = {
+            "Employee Status": "Departed",
+            "Join Date (yyyy/mm/dd)": TODAY - timedelta(days=300),
+            "Probation Period End Date": pd.NaT,
+            "Exit Date yyyy/mm/dd": TODAY - timedelta(days=10),
+        }
+        result = process_data(_build_raw_df([row]))
+        assert result["Probation Completed"].iloc[0] == "No Data"
+
+    def test_probation_pass_rate_counts_only_resolved(self):
+        from src.data_processing import calculate_kpis
+        rows = [
+            self._prob_row("Active", TODAY - timedelta(days=30)),                       # pass
+            self._prob_row("Active", TODAY + timedelta(days=30)),                       # unresolved
+            {**self._prob_row("Departed", TODAY - timedelta(days=210),
+                              TODAY - timedelta(days=250))},                            # fail
+            {**self._prob_row("Departed", TODAY - timedelta(days=210),
+                              TODAY - timedelta(days=10))},                             # pass
+        ]
+        kpis = calculate_kpis(process_data(_build_raw_df(rows)))
+        assert kpis["probation_pass_rate"] == pytest.approx(66.7, abs=0.1)
+
+    def test_process_data_without_exit_date_column(self):
+        """Regression: KeyError 'Exit Date' when the data has no Exit Date column."""
+        df = pd.DataFrame({
+            "Employee Status": ["Active", "Departed"],
+            "Join Date": [TODAY - timedelta(days=100)] * 2,
+            "Probation Period End Date": [TODAY - timedelta(days=10)] * 2,
+        })
+        result = process_data(df)
+        assert "Probation Completed" in result.columns
 
     def test_probation_not_created_when_column_missing(self):
         raw = _build_raw_df(

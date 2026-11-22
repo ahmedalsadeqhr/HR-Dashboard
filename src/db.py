@@ -54,16 +54,24 @@ def fetch_last_upload() -> dict | None:
     return None
 
 
+def _max_id(client) -> int | None:
+    rows = client.table("employees").select("id").order("id", desc=True).limit(1).execute().data
+    return rows[0]["id"] if rows else None
+
+
 def replace_employees(df: pd.DataFrame) -> None:
-    """Truncate employees table and insert all rows as JSONB in batches."""
+    """Replace all employee rows without ever leaving the table empty on failure.
+
+    New rows are inserted first; only after every batch succeeds are the old rows
+    (id <= the max id seen before the insert) deleted. If an insert fails, the
+    partially inserted new rows are removed and the old data stays intact.
+    """
     import math
     client = get_supabase_client()
-    client.table("employees").delete().gte("id", 0).execute()
 
     # Replace all NaN/inf/NaT with None for valid JSON
     clean = df.where(pd.notnull(df), None)
     raw_records = clean.to_dict(orient="records")
-    # Second pass: catch any remaining float NaN or inf that slipped through
 
     def sanitize(v):
         if isinstance(v, float) and (math.isnan(v) or math.isinf(v)):
@@ -71,9 +79,19 @@ def replace_employees(df: pd.DataFrame) -> None:
         return v
     records = [{k: sanitize(v) for k, v in row.items()} for row in raw_records]
 
-    for i in range(0, len(records), _BATCH_SIZE):
-        batch = [{"data": row} for row in records[i: i + _BATCH_SIZE]]
-        client.table("employees").insert(batch).execute()
+    old_max = _max_id(client)
+    try:
+        for i in range(0, len(records), _BATCH_SIZE):
+            batch = [{"data": row} for row in records[i: i + _BATCH_SIZE]]
+            client.table("employees").insert(batch).execute()
+    except Exception:
+        # Roll back: drop whatever new rows made it in, keep the old data.
+        floor = old_max if old_max is not None else -1
+        client.table("employees").delete().gt("id", floor).execute()
+        raise
+
+    if old_max is not None:
+        client.table("employees").delete().lte("id", old_max).execute()
 
 
 def log_upload(uploaded_by: str, row_count: int, columns: list[str]) -> None:
