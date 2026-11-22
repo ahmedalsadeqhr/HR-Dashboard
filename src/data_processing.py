@@ -156,6 +156,14 @@ def process_data(df):
     }
     df = df.rename(columns={k: v for k, v in rename_map.items() if k in df.columns})
 
+    # Columns the dashboard filters/charts rely on: add empty ones if the stored
+    # data lacks them (e.g. an upload with no leavers) so the app still loads.
+    for col in ('Exit Type', 'Gender', 'Department', 'Position'):
+        if col not in df.columns:
+            df[col] = pd.NA
+    if 'Employee Status' not in df.columns:
+        df['Employee Status'] = 'Active'
+
     # Parse date columns
     date_cols = ['Join Date', 'Exit Date', 'Birthday Date', 'Probation Period End Date',
                  'Regularization Date', 'Contract End Date']

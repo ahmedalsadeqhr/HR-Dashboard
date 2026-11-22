@@ -92,6 +92,17 @@ except Exception as e:
 active_count  = (merged_df['Employee Status'] == 'Active').sum()
 leaver_count  = (merged_df['Employee Status'] == 'Departed').sum()
 
+if leaver_count == 0:
+    status_info = ""
+    if 'ApprovalStatus' in leavers_raw.columns:
+        counts = leavers_raw['ApprovalStatus'].iloc[1:].value_counts(dropna=False).to_dict()
+        status_info = f" ApprovalStatus values found in the file: {counts}. Only 'Effective' rows are kept."
+    st.error(
+        "No departed employees were found in the Offboarding file, so uploading would remove "
+        "all leaver data from the dashboard." + status_info + " Check you picked the right file."
+    )
+    st.stop()
+
 st.success(
     f"Ready to upload — **{len(merged_df):,} total rows**: "
     f"{active_count:,} active, {leaver_count:,} departed."
