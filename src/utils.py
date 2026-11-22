@@ -98,6 +98,8 @@ def generate_summary_report(filtered_df, df, kpis):
         f"Nationalities: {kpis['nationality_count']}",
         f"Probation Pass Rate: {kpis['probation_pass_rate']:.1f}%",
         f"YoY Growth: {kpis['growth_rate']:+.1f}%",
+        f"12-Month Turnover: {kpis.get('turnover_12m', 0):.1f}% "
+        f"({kpis.get('exits_12m', 0)} exits / avg headcount {kpis.get('avg_headcount_12m', 0):.0f})",
         "",
         "=== DEPARTMENT BREAKDOWN ===",
     ]
