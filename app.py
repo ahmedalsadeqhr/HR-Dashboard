@@ -823,7 +823,7 @@ st.markdown("---")
 tabs = st.tabs(["Analysis", "Employee Data"])
 
 with tabs[0]:
-    analysis.render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG)
+    analysis.render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG, scope_df=scope_df)
 
 with tabs[1]:
     employee_data.render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG)

@@ -318,6 +318,38 @@ def calculate_turnover_12m(df, today=None):
     }
 
 
+def calculate_period_turnover(df, freq='M', periods=24, today=None):
+    """Turnover per calendar month ('M') or quarter ('Q').
+
+    Turnover % = exits in the period / average headcount, where average headcount is the
+    mean of headcount at the start and at the end of the period (same definition as the
+    12-month KPI). Returns columns Period, Exits, Avg Headcount, Turnover Rate %, Partial.
+    """
+    cols = ['Period', 'Exits', 'Avg Headcount', 'Turnover Rate %', 'Partial']
+    if 'Join Date' not in df.columns or 'Exit Date' not in df.columns or len(df) == 0:
+        return pd.DataFrame(columns=cols)
+    today = pd.Timestamp(today if today is not None else datetime.now()).normalize()
+    join = pd.to_datetime(df['Join Date'], errors='coerce')
+    exit_dt = pd.to_datetime(df['Exit Date'], errors='coerce')
+    exited = exit_dt.notna() & (df['Employee Status'] == 'Departed')
+    first = join.min()
+    if pd.isna(first):
+        return pd.DataFrame(columns=cols)
+
+    def headcount(on):
+        return int(((join <= on) & (exit_dt.isna() | (exit_dt > on))).sum())
+
+    rows = []
+    for per in pd.period_range(first, today, freq=freq)[-periods:]:
+        start, end = per.start_time.normalize(), per.end_time.normalize()
+        avg = (headcount(start - pd.Timedelta(days=1)) + headcount(min(end, today))) / 2
+        exits = int((exited & (exit_dt >= start) & (exit_dt < end + pd.Timedelta(days=1))).sum())
+        rows.append({'Period': str(per), 'Exits': exits, 'Avg Headcount': avg,
+                     'Turnover Rate %': round(exits / avg * 100, 1) if avg > 0 else 0.0,
+                     'Partial': end > today})
+    return pd.DataFrame(rows, columns=cols)
+
+
 @st.cache_data
 def calculate_kpis(df):
     """Calculate all KPI metrics from filtered dataframe."""

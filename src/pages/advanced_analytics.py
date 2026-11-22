@@ -3,11 +3,11 @@ import pandas as pd
 import plotly.express as px
 from datetime import datetime
 
+from src.data_processing import calculate_period_turnover
 from src.utils import _style, dept_group
 
 
-def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG):
-    adv_departed = filtered_df[filtered_df['Employee Status'] == 'Departed']
+def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG, scope_df=None):
 
     # --- 1. New Hire 90-Day Retention ---
     st.subheader("New Hire 90-Day Retention")
@@ -71,44 +71,25 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
 
     st.markdown("---")
 
-    # --- 2. Rolling Turnover Rate ---
+    # --- 2. Turnover Rate (exits / average headcount) ---
     st.subheader("Rolling Turnover Rate")
-    if len(adv_departed) > 0 and 'Exit Date' in adv_departed.columns:
-        monthly_exits = adv_departed.groupby(
-            adv_departed['Exit Date'].dt.to_period('M')
-        ).size().reset_index(name='Exits')
-        monthly_exits.columns = ['Period', 'Exits']
-        monthly_exits['Period'] = monthly_exits['Period'].astype(str)
+    # Headcount needs active + departed employees, so use the scope that ignores the
+    # Employee Status / Exit Type filters.
+    base = scope_df if scope_df is not None else filtered_df
+    period_view = st.radio("View", ["Monthly", "Quarterly"], horizontal=True, key="turnover_period")
+    if period_view == "Quarterly":
+        turnover_df = calculate_period_turnover(base, freq='Q', periods=8)
+    else:
+        turnover_df = calculate_period_turnover(base, freq='M', periods=24)
 
-        monthly_hires = filtered_df.groupby(
-            filtered_df['Join Date'].dt.to_period('M')
-        ).size().reset_index(name='Hires')
-        monthly_hires.columns = ['Period', 'Hires']
-        monthly_hires['Period'] = monthly_hires['Period'].astype(str)
-
-        turnover_df = pd.merge(monthly_hires, monthly_exits, on='Period', how='outer').fillna(0)
-        turnover_df = turnover_df.sort_values('Period').tail(24)
-        turnover_df['Cumulative Hires'] = turnover_df['Hires'].cumsum()
-        turnover_df['Turnover Rate %'] = (
-            turnover_df['Exits'] / turnover_df['Cumulative Hires'].replace(0, 1) * 100
-        ).round(1)
-
-        period_view = st.radio("View", ["Monthly", "Quarterly"], horizontal=True, key="turnover_period")
-
-        if period_view == "Quarterly":
-            turnover_df['Quarter'] = pd.to_datetime(turnover_df['Period']).dt.to_period('Q').astype(str)
-            q_df = turnover_df.groupby('Quarter').agg({'Exits': 'sum', 'Hires': 'sum'}).reset_index()
-            q_df['Turnover Rate %'] = (q_df['Exits'] / q_df['Hires'].replace(0, 1) * 100).round(1)
-            fig = px.bar(q_df, x='Quarter', y='Turnover Rate %',
-                         color='Turnover Rate %', color_continuous_scale='RdYlGn_r',
-                         text='Turnover Rate %')
-        else:
-            fig = px.bar(turnover_df, x='Period', y='Turnover Rate %',
-                         color='Turnover Rate %', color_continuous_scale='RdYlGn_r',
-                         text='Turnover Rate %')
-
+    if len(turnover_df) > 0 and turnover_df['Exits'].sum() > 0:
+        fig = px.bar(turnover_df, x='Period', y='Turnover Rate %',
+                     color='Turnover Rate %', color_continuous_scale='RdYlGn_r',
+                     text='Turnover Rate %', hover_data=['Exits', 'Avg Headcount'])
         fig.update_traces(texttemplate='%{text:.1f}%', textposition='outside')
         fig.update_layout(xaxis_tickangle=-45)
         st.plotly_chart(_style(fig, 400), use_container_width=True, config=CHART_CONFIG)
+        st.caption("Turnover = exits in the period / average headcount (start and end of the "
+                   "period). The latest period is still in progress, so it is partial.")
     else:
         st.info("No departure data available for turnover analysis.")
