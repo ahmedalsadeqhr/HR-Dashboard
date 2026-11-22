@@ -823,7 +823,10 @@ st.markdown("---")
 tabs = st.tabs(["Analysis", "Employee Data"])
 
 with tabs[0]:
-    analysis.render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG, scope_df=scope_df)
+    # Passed through session state (not a new argument) so a partially reloaded deploy
+    # cannot crash on a signature mismatch.
+    st.session_state['scope_df'] = scope_df
+    analysis.render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG)
 
 with tabs[1]:
     employee_data.render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG)
