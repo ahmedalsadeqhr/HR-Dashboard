@@ -41,12 +41,53 @@ _LEAVERS_COLS = {
     'OIdJobLevel': 'Job Level',
 }
 
+# "Departed Employees_*.xlsx" export: far richer than Offboarding Management (gender,
+# line manager, nationality, birthday, probation dates...). Its column names carry a
+# 'LookupPrefix_UserID_' prefix, and a few are GUID-prefixed ('<guid>~Field'), so we
+# match those by suffix.
+_DEPARTED_COLS = {
+    'LookupPrefix_UserID_JobNumber': 'Employee ID',
+    'Name': 'Full Name',
+    'Email': 'Email',
+    'LookupPrefix_UserID_extcrmzh_615692_156087692': 'CRM Account',
+    'Gender': 'Gender',
+    'LookupPrefix_UserID_TransitionTypeOID': 'Exit Type',
+    'LookupPrefix_UserID_ChangeReason': 'Exit Reason Category',
+    'LookupPrefix_UserID_OIdDepartment': 'Department',
+    'LookupPrefix_UserID_OIdJobPost': 'Position',
+    'LookupPrefix_UserID_EmployType': 'Employment Type',
+    'LookupPrefix_UserID_EmploymentForm': 'Employment Form',
+    'LookupPrefix_UserID_OIdJobLevel': 'Job Level',
+    'LookupPrefix_UserID_EntryDate': 'Join Date',
+    'LookupPrefix_UserID_ProbationStopDate': 'Probation Period End Date',
+    'LookupPrefix_UserID_RegularizationDate': 'Regularization Date',
+    'LookupPrefix_UserID_LastWorkDate': 'Exit Date',
+    'Nationality': 'Nationality',
+    'Birthday': 'Birthday Date',
+}
+_DEPARTED_SUFFIX_COLS = {'~POIdEmpAdmin-ExportName': 'Line Manager'}
+
+
+def _is_departed_export(df: pd.DataFrame) -> bool:
+    return 'LookupPrefix_UserID_JobNumber' in df.columns
+
+
+def _departed_column_map(df: pd.DataFrame) -> dict:
+    mapping = {src: tgt for src, tgt in _DEPARTED_COLS.items() if src in df.columns}
+    for col in df.columns:
+        for suffix, tgt in _DEPARTED_SUFFIX_COLS.items():
+            if str(col).endswith(suffix):
+                mapping[col] = tgt
+    return mapping
+
 
 def merge_two_sources(active_raw: pd.DataFrame, leavers_raw: pd.DataFrame) -> pd.DataFrame:
-    """Normalise and merge the Active Employees and Offboarding files into one DataFrame.
+    """Normalise and merge the Active Employees file with a leavers file.
 
-    Both files have row 0 as English display-name headers — skipped here.
-    Leavers with ApprovalStatus != 'Effective' are excluded.
+    The leavers file may be either the "Departed Employees" export (preferred, all rows
+    are leavers) or the "Offboarding Management" export (only ApprovalStatus ==
+    'Effective' rows are kept). Row 0 of each file holds English display names and is
+    skipped.
     """
     # Skip display-name header row
     active = active_raw.iloc[1:].reset_index(drop=True).copy()
@@ -62,7 +103,10 @@ def merge_two_sources(active_raw: pd.DataFrame, leavers_raw: pd.DataFrame) -> pd
     active['Employee Status'] = 'Active'
 
     # Select and rename leavers columns
-    leavers_keep = {src: tgt for src, tgt in _LEAVERS_COLS.items() if src in leavers.columns}
+    if _is_departed_export(leavers):
+        leavers_keep = _departed_column_map(leavers)
+    else:
+        leavers_keep = {src: tgt for src, tgt in _LEAVERS_COLS.items() if src in leavers.columns}
     leavers = leavers[list(leavers_keep.keys())].rename(columns=leavers_keep)
     leavers['Employee Status'] = 'Departed'
 
@@ -77,6 +121,9 @@ def merge_two_sources(active_raw: pd.DataFrame, leavers_raw: pd.DataFrame) -> pd
         dropped += n - len(active)
     if 'Employee ID' in leavers.columns:
         n = len(leavers)
+        if 'Exit Date' in leavers.columns:
+            order = pd.to_datetime(leavers['Exit Date'], errors='coerce').argsort(kind='stable')
+            leavers = leavers.iloc[order]
         leavers = leavers.drop_duplicates(subset='Employee ID', keep='last')
         dropped += n - len(leavers)
         if 'Employee ID' in active.columns:
@@ -92,15 +139,14 @@ def merge_two_sources(active_raw: pd.DataFrame, leavers_raw: pd.DataFrame) -> pd
 def _require_source_columns(active_raw, leavers_raw, active, leavers):
     """Fail with a clear message when an export is missing columns the dashboard needs."""
     problems = []
-    for src, tgt in (('EntryDate', 'Join Date'), ('OIdDepartment', 'Department')):
+    for tgt in ('Join Date', 'Department'):
         if tgt not in active.columns:
-            problems.append(f"Active Employees file is missing column '{src}' ({tgt})")
+            problems.append(f"Active Employees file has no '{tgt}' column")
     if len(leavers) > 0:
-        for src, tgt in (('LastWorkDate', 'Exit Date'), ('TransitionTypeOID', 'Exit Type'),
-                         ('EntryDate', 'Join Date')):
+        for tgt in ('Exit Date', 'Exit Type', 'Join Date'):
             if tgt not in leavers.columns:
                 problems.append(
-                    f"Offboarding file is missing column '{src}' ({tgt}). "
+                    f"Leavers file has no '{tgt}' column. "
                     f"Columns found: {', '.join(map(str, leavers_raw.columns[:25]))}"
                 )
     if problems:
