@@ -634,12 +634,25 @@ NAME_COL = detect_name_column(df)
 st.sidebar.markdown("---")
 st.sidebar.header("Filters")
 
-if st.sidebar.button("Reset All Filters"):
-    for key in ['dept_group_filter', 'dept_filter', 'status_filter', 'gender_filter',
-                'vendor_filter', 'nationality_filter', 'exit_type_filter',
-                'join_start', 'join_end', 'exit_start', 'exit_end']:
-        st.session_state.pop(key, None)
-    st.rerun()
+_ALL_DEPT_GROUPS = sorted(df['Department'].dropna().map(dept_group).unique().tolist())
+_ALL_DEPTS = sorted(df['Department'].dropna().unique().tolist())
+
+
+def _reset_filters():
+    """Set every filter widget back to its default.
+
+    Runs as a button callback (before widgets are drawn). Assigning the values explicitly,
+    rather than deleting the keys, is what makes the browser update the dropdowns too.
+    """
+    st.session_state.update({
+        'status_filter': 'All', 'gender_filter': 'All', 'vendor_filter': 'All',
+        'nationality_filter': 'All', 'exit_type_filter': 'All',
+        'dept_group_filter': _ALL_DEPT_GROUPS, 'dept_filter': _ALL_DEPTS,
+        'join_start': None, 'join_end': None, 'exit_start': None, 'exit_end': None,
+    })
+
+
+st.sidebar.button("Reset All Filters", on_click=_reset_filters)
 
 status_filter = st.sidebar.selectbox("Employee Status", ["All", "Active", "Departed"], key="status_filter")
 
@@ -673,10 +686,10 @@ if 'Exit Date' in df.columns:
         label_visibility="collapsed", key="exit_end",
     )
 
-all_dept_groups = sorted(df['Department'].dropna().map(dept_group).unique().tolist())
+all_dept_groups = _ALL_DEPT_GROUPS
 dept_group_filter = st.sidebar.multiselect("Department", all_dept_groups, default=all_dept_groups, key="dept_group_filter")
 
-all_depts = sorted(df['Department'].dropna().unique().tolist())
+all_depts = _ALL_DEPTS
 dept_filter = st.sidebar.multiselect("Teams", all_depts, default=all_depts, key="dept_filter")
 
 gender_filter = st.sidebar.selectbox(
