@@ -53,8 +53,8 @@ st.caption("Export: All Active Employees_*.xlsx")
 active_file = st.file_uploader("", type=["xlsx"], key="active_upload", label_visibility="collapsed")
 
 # ── Step 2: Leavers ───────────────────────────────────────────────────────────
-st.subheader("Step 2 — Offboarding / Leavers file")
-st.caption("Export: Offboarding Management_*.xlsx")
+st.subheader("Step 2 — Leavers file")
+st.caption("Export: Departed Employees_*.xlsx (recommended, full details) or Offboarding Management_*.xlsx")
 leavers_file = st.file_uploader("", type=["xlsx"], key="leavers_upload", label_visibility="collapsed")
 
 # ── Status indicators ─────────────────────────────────────────────────────────
@@ -80,7 +80,7 @@ except Exception as e:
 try:
     leavers_raw = pd.read_excel(leavers_file)
 except Exception as e:
-    st.error(f"Could not read Offboarding file: {e}")
+    st.error(f"Could not read Leavers file: {e}")
     st.stop()
 
 try:
@@ -98,7 +98,7 @@ if leaver_count == 0:
         counts = leavers_raw['ApprovalStatus'].iloc[1:].value_counts(dropna=False).to_dict()
         status_info = f" ApprovalStatus values found in the file: {counts}. Only 'Effective' rows are kept."
     st.error(
-        "No departed employees were found in the Offboarding file, so uploading would remove "
+        "No departed employees were found in the leavers file, so uploading would remove "
         "all leaver data from the dashboard." + status_info + " Check you picked the right file."
     )
     st.stop()

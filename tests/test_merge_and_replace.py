@@ -36,7 +36,7 @@ def test_merge_drops_repeated_ids_within_a_file():
 
 
 def test_merge_raises_clear_error_when_exit_date_missing():
-    with pytest.raises(ValueError, match="LastWorkDate"):
+    with pytest.raises(ValueError, match="Exit Date"):
         merge_two_sources(_active(['1']), _leavers(['3'], with_exit_date=False))
 
 
@@ -68,3 +68,37 @@ def test_replace_failure_keeps_old_data_and_removes_partial_rows():
             replace_employees(df)
     t.delete.return_value.gt.assert_called_once_with("id", 10)
     t.delete.return_value.lte.assert_not_called()
+
+
+def _departed(rows):
+    base = {'LookupPrefix_UserID_TransitionTypeOID': 'Voluntary Termination',
+            'LookupPrefix_UserID_EntryDate': '2024-01-01', 'LookupPrefix_UserID_OIdDepartment': 'EGSS',
+            'LookupPrefix_UserID_LastWorkDate': '2026-05-01',
+            'abc-guid~POIdEmpAdmin-ExportName': 'Boss', 'Birthday': '1995-01-01'}
+    hdr = {'LookupPrefix_UserID_JobNumber': 'Employee ID', 'Name': 'Name', 'Gender': 'Gender',
+           **{k: 'h' for k in base}}
+    return pd.DataFrame([hdr] + [{**base, **r} for r in rows])
+
+
+def test_merge_supports_departed_employees_export():
+    dep = _departed([
+        {'LookupPrefix_UserID_JobNumber': '7', 'Name': 'A', 'Gender': 'Female'},
+        {'LookupPrefix_UserID_JobNumber': '8', 'Name': 'B', 'Gender': 'Male'},
+    ])
+    merged = merge_two_sources(_active(['1']), dep)
+    left = merged[merged['Employee Status'] == 'Departed']
+    assert len(left) == 2
+    assert set(left['Gender']) == {'Female', 'Male'}
+    assert set(left['Line Manager']) == {'Boss'}
+    assert left['Exit Type'].iloc[0] == 'Voluntary Termination'
+    assert 'Exit Date' in merged.columns and 'Birthday Date' in merged.columns
+
+
+def test_departed_export_keeps_latest_stint_per_employee():
+    dep = _departed([
+        {'LookupPrefix_UserID_JobNumber': '7', 'LookupPrefix_UserID_LastWorkDate': '2026-09-01'},
+        {'LookupPrefix_UserID_JobNumber': '7', 'LookupPrefix_UserID_LastWorkDate': '2025-01-01'},
+    ])
+    merged = merge_two_sources(_active(['1']), dep)
+    left = merged[merged['Employee Status'] == 'Departed']
+    assert len(left) == 1 and str(left['Exit Date'].iloc[0]).startswith('2026-09-01')
