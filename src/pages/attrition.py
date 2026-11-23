@@ -303,20 +303,6 @@ def render(df, filtered_df, kpis, NAME_COL, COLORS, COLOR_SEQUENCE, CHART_CONFIG
 
     st.markdown("---")
 
-    # Exit Reasons breakdown
-    if 'Exit Reason Category' in departed_df.columns:
-        st.subheader("Exit Reasons (Categorized)")
-        reason_list = departed_df[departed_df['Exit Reason Category'].notna(
-        )]['Exit Reason Category'].value_counts().reset_index()
-        reason_list.columns = ['Reason', 'Count']
-        if len(reason_list) > 0:
-            fig = px.bar(reason_list, x='Count', y='Reason', orientation='h',
-                         color='Count', color_continuous_scale='Oranges')
-            fig.update_layout(yaxis={'categoryorder': 'total ascending'})
-            st.plotly_chart(_style(fig, max(300, len(reason_list) * 30)), use_container_width=True, config=CHART_CONFIG)
-
-    st.markdown("---")
-
     # Manager-linked attrition
     st.subheader("Manager-Linked Attrition")
     manager_data = get_manager_attrition(filtered_df)
